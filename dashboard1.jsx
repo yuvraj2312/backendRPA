@@ -4,7 +4,6 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import FilterBar from './FilterBar';
 import EnhancedChart from './EnhancedChart';
-import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -38,12 +37,29 @@ const Dashboard = () => {
     }
   };
 
+  const fetchDropdowns = async (username, domain, process) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:5000/get_domains`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { username, domain, processname: process },
+      });
+      const { usernames1, domains1, processes1 } = res.data;
+      setDropdowns({ usernames: usernames1, domains: domains1, process_names: processes1 });
+    } catch (err) {
+      console.error('Error fetching dropdowns:', err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchDropdowns('', '', '');
   }, []);
 
   const handleFilterChange = (key, value) => {
-    setFilters({ ...filters, [key]: value });
+    const updatedFilters = { ...filters, [key]: value };
+    setFilters(updatedFilters);
+    fetchDropdowns(updatedFilters.username, updatedFilters.domain, updatedFilters.process);
   };
 
   const exportCSV = () => {
