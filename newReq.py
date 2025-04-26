@@ -26,26 +26,26 @@ def Usecase():
 
             # Get form data
             form_data = {
-                'OLM_ID': request.form.get('olm-id', '').strip(),
-                'Priority': request.form.get('priority', '').strip(),
-                'Use_Case_Name': request.form.get('use-case', '').strip(),
-                'Use_Case_Description': request.form.get('use-case-description', '').strip(),
-                'Volume_Unit': request.form.get('volume-unit', '').strip(),
-                'Volume': request.form.get('volume', '').strip(),
-                'Activity_Frequency': request.form.get('activity-frequency', '').strip(),
-                'Circle_Number': request.form.get('circle-number', '').strip(),  # optional
-                'Circle_Name': request.form.get('circle-name', '').strip(),        # optional
-                'Time_Required': request.form.get('time-required', '').strip(),
-                'SLA_Expected': request.form.get('sla-expected', '').strip(),
-                'No_of_Assistant_Manager': request.form.get('am', '').strip(),     # optional
-                'No_of_Deputy_Manager': request.form.get('deputy-m', '').strip(),  # optional
-                'No_of_Manager': request.form.get('manager', '').strip(),          # optional
-                'No_of_Senior': request.form.get('senior', '').strip(),            # optional
-                'OEM_Domain': request.form.get('oem-domain', '').strip(),
-                'Application_Used': request.form.get('systems-tools', '').strip(),
-                'Activity_Performed_By': request.form.get('activity-performed-by', '').strip(),
-                'Partner_Name': request.form.get('partner-name-text', '').strip(),
-                'KPI_Indicators': request.form.get('kpi-indicators', '').strip()
+                'OLM_ID': request.form.get('OLM_ID', '').strip(),
+                'Priority': request.form.get('Priority', '').strip(),
+                'Use_Case_Name': request.form.get('Use_Case_Name', '').strip(),
+                'Use_Case_Description': request.form.get('Use_Case_Description', '').strip(),
+                'Volume_Unit': request.form.get('Volume_Unit', '').strip(),
+                'Volume': request.form.get('Volume', '').strip(),
+                'Activity_Frequency': request.form.get('Activity_Frequency', '').strip(),
+                'Circle_Number': request.form.get('Circle_Number', '').strip(),
+                'Circle_Name': request.form.get('Circle_Name', '').strip(),
+                'Time_Required': request.form.get('Time_Required', '').strip(),
+                'SLA_Expected': request.form.get('SLA_Expected', '').strip(),
+                'No_of_Assistant_Manager': request.form.get('No_of_Assistant_Manager', '').strip(),
+                'No_of_Deputy_Manager': request.form.get('No_of_Deputy_Manager', '').strip(),
+                'No_of_Manager': request.form.get('No_of_Manager', '').strip(),
+                'No_of_Senior': request.form.get('No_of_Senior', '').strip(),
+                'OEM_Domain': request.form.get('OEM_Domain', '').strip(),
+                'Application_Used': request.form.get('Application_Used', '').strip(),
+                'Activity_Performed_By': request.form.get('Activity_Performed_By', '').strip(),
+                'Partner_Name': request.form.get('Partner_Name', '').strip(),
+                'KPI_Indicators': request.form.get('KPI_Indicators', '').strip()
             }
 
             # Validate required fields
