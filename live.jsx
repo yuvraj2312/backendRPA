@@ -28,13 +28,14 @@ const LivePage = () => {
   });
   const [showCalendar, setShowCalendar] = useState(false);
 
+  // Fetch Domains
   const fetchDomains = async () => {
     try {
       const response = await fetch("/get_domains");
       const result = await response.json();
 
       const uniqueDomains = [
-        ...new Set(result.map((item) => item.domain)),
+        ...new Set(result.domains1), // Extract only domains from result
       ].filter(Boolean); // remove empty/null domains
       setDomains(uniqueDomains);
     } catch (err) {
@@ -42,6 +43,7 @@ const LivePage = () => {
     }
   };
 
+  // Fetch Data based on filters
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -76,15 +78,18 @@ const LivePage = () => {
     }
   };
 
+  // Handle input changes in filters
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFilters({ ...filters, [name]: value });
   };
 
+  // Trigger search
   const handleSearch = () => {
     fetchData();
   };
 
+  // Handle copying data to clipboard
   const handleCopy = () => {
     const text = data.map((row) => Object.values(row).join("\t")).join("\n");
     navigator.clipboard.writeText(text);
@@ -92,6 +97,7 @@ const LivePage = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Handle exporting data to Excel
   const handleExportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
@@ -99,6 +105,7 @@ const LivePage = () => {
     XLSX.writeFile(workbook, "LiveData.xlsx");
   };
 
+  // Handle exporting data to CSV
   const handleExportCSV = () => {
     const csvRows = [
       ["Process Name", "NLT Name", "Domain", "Process Owner", "Stage", "Go Live Date"],
@@ -119,6 +126,7 @@ const LivePage = () => {
     a.click();
   };
 
+  // Handle exporting data to PDF
   const handleExportPDF = () => {
     const doc = new jsPDF();
     autoTable(doc, {
@@ -135,6 +143,7 @@ const LivePage = () => {
     doc.save("LiveData.pdf");
   };
 
+  // Close calendar when clicked outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (calendarRef.current && !calendarRef.current.contains(event.target)) {
@@ -145,6 +154,7 @@ const LivePage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Fetch domains and data on initial load
   useEffect(() => {
     fetchDomains();
     fetchData();
@@ -156,7 +166,6 @@ const LivePage = () => {
       <div className="flex flex-col flex-1">
         <Header />
         <div className="p-6">
-
           {/* Search Filters */}
           <div className="flex items-end flex-wrap gap-4 mb-6">
             <div>
