@@ -12,7 +12,7 @@ const LivePage = () => {
   const tableRef = useRef(null);
   const calendarRef = useRef(null);
 
-  // table data, dropdowns, loading & error state
+  // table data, dropdown list, loading & error state
   const [data, setData] = useState([]);
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -21,7 +21,7 @@ const LivePage = () => {
   // copy-to-clipboard flag
   const [copied, setCopied] = useState(false);
 
-  // filters
+  // filter state
   const [filters, setFilters] = useState({
     domain: "",
     goLiveRange: {
@@ -32,7 +32,7 @@ const LivePage = () => {
   });
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // Fetch domain dropdown once
+  // ─── fetch domain dropdown options ──────────────────────────────
   const fetchDomains = async () => {
     try {
       const res = await fetch("/get_domains?username=&domain=&processname=");
@@ -45,7 +45,7 @@ const LivePage = () => {
     }
   };
 
-  // Fetch table data with optional filters
+  // ─── fetch table data with optional filters ───────────────────
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -55,14 +55,10 @@ const LivePage = () => {
         params.append("domain", filters.domain);
       }
       if (filters.goLiveRange.startDate && filters.goLiveRange.endDate) {
-        params.append(
-          "startDate",
-          filters.goLiveRange.startDate.toLocaleDateString("en-CA") // ISO yyyy-MM-dd
-        );
-        params.append(
-          "endDate",
-          filters.goLiveRange.endDate.toLocaleDateString("en-CA")
-        );
+        // send YYYY-MM-DD for TRY_CONVERT in SQL
+        const toISO = d => d.toISOString().slice(0,10);
+        params.append("startDate", toISO(filters.goLiveRange.startDate));
+        params.append("endDate", toISO(filters.goLiveRange.endDate));
       }
 
       const res = await fetch(`/processlist?${params.toString()}`);
@@ -77,18 +73,16 @@ const LivePage = () => {
     }
   };
 
-  // on-change handlers
-  const handleInputChange = (e) => {
+  // ─── handlers ───────────────────────────────────────────────────
+  const handleInputChange = e => {
     const { name, value } = e.target;
-    setFilters((f) => ({ ...f, [name]: value }));
+    setFilters(f => ({ ...f, [name]: value }));
   };
 
-  const handleSearch = () => {
-    fetchData();
-  };
+  const handleSearch = () => fetchData();
 
   const handleCopy = () => {
-    const text = data.map((row) => Object.values(row).join("\t")).join("\n");
+    const text = data.map(r => Object.values(r).join("\t")).join("\n");
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -104,16 +98,9 @@ const LivePage = () => {
   const handleExportCSV = () => {
     const rows = [
       ["Process", "NLT", "Domain", "Owner", "Stage", "Go Live"],
-      ...data.map((r) => [
-        r.process,
-        r.nlt,
-        r.domain,
-        r.owner,
-        r.stage,
-        r.goLive,
-      ]),
+      ...data.map(r => [r.process, r.nlt, r.domain, r.owner, r.stage, r.goLive])
     ];
-    const csv = rows.map((r) => r.join(",")).join("\n");
+    const csv = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -124,22 +111,15 @@ const LivePage = () => {
   const handleExportPDF = () => {
     const doc = new jsPDF();
     autoTable(doc, {
-      head: [["Process", "NLT", "Domain", "Owner", "Stage", "Go Live"]],
-      body: data.map((r) => [
-        r.process,
-        r.nlt,
-        r.domain,
-        r.owner,
-        r.stage,
-        r.goLive,
-      ]),
+      head: [["Process","NLT","Domain","Owner","Stage","Go Live"]],
+      body: data.map(r => [r.process, r.nlt, r.domain, r.owner, r.stage, r.goLive])
     });
     doc.save("LiveData.pdf");
   };
 
-  // Close calendar when clicking outside
+  // ─── close calendar on outside click ───────────────────────────
   useEffect(() => {
-    const onClick = (e) => {
+    const onClick = e => {
       if (calendarRef.current && !calendarRef.current.contains(e.target)) {
         setShowCalendar(false);
       }
@@ -148,7 +128,7 @@ const LivePage = () => {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  // initial load
+  // ─── initial load ───────────────────────────────────────────────
   useEffect(() => {
     fetchDomains();
     fetchData();
@@ -162,11 +142,8 @@ const LivePage = () => {
         <div className="p-6">
           {/* Filters */}
           <div className="flex items-end flex-wrap gap-4 mb-6">
-            {/* Domain dropdown */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700">
-                Domain
-              </label>
+              <label className="block text-sm font-semibold text-gray-700">Domain</label>
               <select
                 name="domain"
                 value={filters.domain}
@@ -174,33 +151,26 @@ const LivePage = () => {
                 className="border rounded-md px-4 py-2 w-56"
               >
                 <option value="">All Domains</option>
-                {domains.map((d, i) => (
-                  <option key={i} value={d}>
-                    {d}
-                  </option>
-                ))}
+                {domains.map((d,i) => <option key={i} value={d}>{d}</option>)}
               </select>
             </div>
 
-            {/* Date range */}
             <div className="relative" ref={calendarRef}>
-              <label className="block text-sm font-semibold text-gray-700">
-                Go Live Date Range
-              </label>
+              <label className="block text-sm font-semibold text-gray-700">Go Live Range</label>
               <input
                 readOnly
                 className="border rounded-md px-4 py-2 w-64 bg-white cursor-pointer"
                 value={`${filters.goLiveRange.startDate.toLocaleDateString()} - ${filters.goLiveRange.endDate.toLocaleDateString()}`}
-                onClick={() => setShowCalendar((v) => !v)}
+                onClick={() => setShowCalendar(v => !v)}
               />
               {showCalendar && (
                 <div className="absolute z-50 mt-2 shadow-lg border rounded-md bg-white">
                   <DateRange
-                    editableDateInputs
                     ranges={[filters.goLiveRange]}
+                    editableDateInputs
                     moveRangeOnFirstSelection={false}
                     onChange={({ selection }) => {
-                      setFilters((f) => ({ ...f, goLiveRange: selection }));
+                      setFilters(f => ({ ...f, goLiveRange: selection }));
                       setShowCalendar(false);
                     }}
                   />
@@ -216,12 +186,12 @@ const LivePage = () => {
             </button>
           </div>
 
-          {/* Export buttons & total */}
+          {/* Export & total */}
           <div className="flex justify-between items-center flex-wrap mb-4">
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={handleCopy}
-                className={`px-4 py-2 rounded-md ${copied ? "bg-blue-600" : "bg-indigo-500 hover:bg-indigo-600"} text-white`}
+                className={`px-4 py-2 rounded-md text-white ${copied ? "bg-blue-600" : "bg-indigo-500 hover:bg-indigo-600"}`}
               >
                 {copied ? "Copied" : "Copy"}
               </button>
@@ -261,14 +231,14 @@ const LivePage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((row, i) => (
+                  {data.map((r,i) => (
                     <tr key={i} className="hover:bg-gray-100">
-                      <td className="px-6 py-4">{row.process}</td>
-                      <td className="px-6 py-4">{row.nlt}</td>
-                      <td className="px-6 py-4">{row.domain}</td>
-                      <td className="px-6 py-4">{row.owner}</td>
-                      <td className="px-6 py-4">{row.stage}</td>
-                      <td className="px-6 py-4">{row.goLive}</td>
+                      <td className="px-6 py-4">{r.process}</td>
+                      <td className="px-6 py-4">{r.nlt}</td>
+                      <td className="px-6 py-4">{r.domain}</td>
+                      <td className="px-6 py-4">{r.owner}</td>
+                      <td className="px-6 py-4">{r.stage}</td>
+                      <td className="px-6 py-4">{r.goLive}</td>
                     </tr>
                   ))}
                 </tbody>
