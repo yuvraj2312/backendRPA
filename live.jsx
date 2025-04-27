@@ -12,12 +12,16 @@ const LivePage = () => {
   const tableRef = useRef(null);
   const calendarRef = useRef(null);
 
+  // table data, dropdowns, loading & error state
   const [data, setData] = useState([]);
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // copy-to-clipboard flag
   const [copied, setCopied] = useState(false);
+
+  // filters
   const [filters, setFilters] = useState({
     domain: "",
     goLiveRange: {
@@ -28,22 +32,20 @@ const LivePage = () => {
   });
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // Fetch Domains
+  // Fetch domain dropdown once
   const fetchDomains = async () => {
     try {
-      const response = await fetch("/get_domains");
-      const result = await response.json();
-
-      const uniqueDomains = [
-        ...new Set(result.domains1), // Extract only domains from result
-      ].filter(Boolean); // remove empty/null domains
-      setDomains(uniqueDomains);
+      const res = await fetch("/get_domains?username=&domain=&processname=");
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      const json = await res.json();
+      // your endpoint returns { usernames1: [...], domains1: [...], processes1: [...] }
+      setDomains(json.domains1 || []);
     } catch (err) {
       console.error("Failed to fetch domains:", err);
     }
   };
 
-  // Fetch Data based on filters
+  // Fetch table data with optional filters
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -55,41 +57,36 @@ const LivePage = () => {
       if (filters.goLiveRange.startDate && filters.goLiveRange.endDate) {
         params.append(
           "startDate",
-          filters.goLiveRange.startDate.toLocaleDateString("en-US")
+          filters.goLiveRange.startDate.toLocaleDateString("en-CA") // ISO yyyy-MM-dd
         );
         params.append(
           "endDate",
-          filters.goLiveRange.endDate.toLocaleDateString("en-US")
+          filters.goLiveRange.endDate.toLocaleDateString("en-CA")
         );
       }
 
-      const response = await fetch(`/processlist?${params.toString()}`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch data");
-      }
-
-      const result = await response.json();
-      setData(result);
+      const res = await fetch(`/processlist?${params.toString()}`);
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const json = await res.json();
+      setData(json);
     } catch (err) {
+      console.error("Error fetching data:", err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle input changes in filters
+  // on-change handlers
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFilters({ ...filters, [name]: value });
+    setFilters((f) => ({ ...f, [name]: value }));
   };
 
-  // Trigger search
   const handleSearch = () => {
     fetchData();
   };
 
-  // Handle copying data to clipboard
   const handleCopy = () => {
     const text = data.map((row) => Object.values(row).join("\t")).join("\n");
     navigator.clipboard.writeText(text);
@@ -97,64 +94,61 @@ const LivePage = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Handle exporting data to Excel
   const handleExportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "LiveData");
-    XLSX.writeFile(workbook, "LiveData.xlsx");
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "LiveData");
+    XLSX.writeFile(wb, "LiveData.xlsx");
   };
 
-  // Handle exporting data to CSV
   const handleExportCSV = () => {
-    const csvRows = [
-      ["Process Name", "NLT Name", "Domain", "Process Owner", "Stage", "Go Live Date"],
-      ...data.map((row) => [
-        row.process,
-        row.nlt,
-        row.domain,
-        row.owner,
-        row.stage,
-        row.goLive,
+    const rows = [
+      ["Process", "NLT", "Domain", "Owner", "Stage", "Go Live"],
+      ...data.map((r) => [
+        r.process,
+        r.nlt,
+        r.domain,
+        r.owner,
+        r.stage,
+        r.goLive,
       ]),
     ];
-    const csvContent = csvRows.map((e) => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    const csv = rows.map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "LiveData.csv";
     a.click();
   };
 
-  // Handle exporting data to PDF
   const handleExportPDF = () => {
     const doc = new jsPDF();
     autoTable(doc, {
-      head: [["Process Name", "NLT Name", "Domain", "Process Owner", "Stage", "Go Live Date"]],
-      body: data.map((row) => [
-        row.process,
-        row.nlt,
-        row.domain,
-        row.owner,
-        row.stage,
-        row.goLive,
+      head: [["Process", "NLT", "Domain", "Owner", "Stage", "Go Live"]],
+      body: data.map((r) => [
+        r.process,
+        r.nlt,
+        r.domain,
+        r.owner,
+        r.stage,
+        r.goLive,
       ]),
     });
     doc.save("LiveData.pdf");
   };
 
-  // Close calendar when clicked outside
+  // Close calendar when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+    const onClick = (e) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target)) {
         setShowCalendar(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  // Fetch domains and data on initial load
+  // initial load
   useEffect(() => {
     fetchDomains();
     fetchData();
@@ -166,11 +160,12 @@ const LivePage = () => {
       <div className="flex flex-col flex-1">
         <Header />
         <div className="p-6">
-          {/* Search Filters */}
+          {/* Filters */}
           <div className="flex items-end flex-wrap gap-4 mb-6">
+            {/* Domain dropdown */}
             <div>
               <label className="block text-sm font-semibold text-gray-700">
-                Domain Name <span className="text-red-500">*</span>
+                Domain
               </label>
               <select
                 name="domain"
@@ -178,36 +173,36 @@ const LivePage = () => {
                 onChange={handleInputChange}
                 className="border rounded-md px-4 py-2 w-56"
               >
-                <option value="">Select Domain</option>
-                {domains.map((domain, idx) => (
-                  <option key={idx} value={domain}>
-                    {domain}
+                <option value="">All Domains</option>
+                {domains.map((d, i) => (
+                  <option key={i} value={d}>
+                    {d}
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* Date range */}
             <div className="relative" ref={calendarRef}>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Go Live Date Range <span className="text-red-500">*</span>
+              <label className="block text-sm font-semibold text-gray-700">
+                Go Live Date Range
               </label>
               <input
-                type="text"
                 readOnly
                 className="border rounded-md px-4 py-2 w-64 bg-white cursor-pointer"
                 value={`${filters.goLiveRange.startDate.toLocaleDateString()} - ${filters.goLiveRange.endDate.toLocaleDateString()}`}
-                onClick={() => setShowCalendar((prev) => !prev)}
+                onClick={() => setShowCalendar((v) => !v)}
               />
               {showCalendar && (
                 <div className="absolute z-50 mt-2 shadow-lg border rounded-md bg-white">
                   <DateRange
-                    editableDateInputs={true}
-                    onChange={(ranges) => {
-                      setFilters((prev) => ({ ...prev, goLiveRange: ranges.selection }));
+                    editableDateInputs
+                    ranges={[filters.goLiveRange]}
+                    moveRangeOnFirstSelection={false}
+                    onChange={({ selection }) => {
+                      setFilters((f) => ({ ...f, goLiveRange: selection }));
                       setShowCalendar(false);
                     }}
-                    moveRangeOnFirstSelection={false}
-                    ranges={[filters.goLiveRange]}
                   />
                 </div>
               )}
@@ -215,67 +210,65 @@ const LivePage = () => {
 
             <button
               onClick={handleSearch}
-              className="bg-red-500 text-white px-6 py-2 rounded-md hover:bg-red-700 transition"
+              className="bg-red-500 text-white px-6 py-2 rounded-md hover:bg-red-700"
             >
               Search
             </button>
           </div>
 
-          {/* Export Buttons */}
+          {/* Export buttons & total */}
           <div className="flex justify-between items-center flex-wrap mb-4">
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={handleCopy}
-                className={`px-4 py-2 rounded-md transition-all duration-300 ${
-                  copied ? "bg-blue-600 text-white" : "bg-indigo-500 text-white hover:bg-indigo-600"
-                }`}
+                className={`px-4 py-2 rounded-md ${copied ? "bg-blue-600" : "bg-indigo-500 hover:bg-indigo-600"} text-white`}
               >
                 {copied ? "Copied" : "Copy"}
               </button>
-              <button onClick={handleExportExcel} className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600">
+              <button onClick={handleExportExcel} className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-md">
                 Excel
               </button>
-              <button onClick={handleExportCSV} className="bg-slate-500 text-white px-4 py-2 rounded-md hover:bg-slate-600">
+              <button onClick={handleExportCSV} className="bg-slate-500 hover:bg-slate-600 text-white px-4 py-2 rounded-md">
                 CSV
               </button>
-              <button onClick={handleExportPDF} className="bg-rose-400 text-white px-4 py-2 rounded-md hover:bg-rose-500">
+              <button onClick={handleExportPDF} className="bg-rose-400 hover:bg-rose-500 text-white px-4 py-2 rounded-md">
                 PDF
               </button>
             </div>
-            <div className="ml-auto text-lg font-semibold text-gray-700">
-              Total Live Processes: {data.length}
+            <div className="text-lg font-semibold text-gray-700">
+              Total Records: {data.length}
             </div>
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto bg-white rounded-lg shadow">
             {loading ? (
-              <div className="text-center p-10 font-semibold text-gray-500">Loading...</div>
+              <div className="p-10 text-center text-gray-500">Loading...</div>
             ) : error ? (
-              <div className="text-center p-10 text-red-500 font-semibold">{error}</div>
+              <div className="p-10 text-center text-red-500">{error}</div>
             ) : data.length === 0 ? (
-              <div className="text-center p-10 font-semibold text-gray-500">No Data Found</div>
+              <div className="p-10 text-center text-gray-500">No data found</div>
             ) : (
               <table className="min-w-full divide-y divide-gray-200 text-sm text-left" ref={tableRef}>
                 <thead className="bg-red-500 text-white">
                   <tr>
-                    <th className="px-6 py-3">Process Name</th>
-                    <th className="px-6 py-3">NLT Name</th>
+                    <th className="px-6 py-3">Process</th>
+                    <th className="px-6 py-3">NLT</th>
                     <th className="px-6 py-3">Domain</th>
-                    <th className="px-6 py-3">Process Owner</th>
-                    <th className="px-6 py-3">Automation Stage</th>
-                    <th className="px-6 py-3">Go Live Date</th>
+                    <th className="px-6 py-3">Owner</th>
+                    <th className="px-6 py-3">Stage</th>
+                    <th className="px-6 py-3">Go Live</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-gray-100">
-                      <td className="px-6 py-4">{item.process}</td>
-                      <td className="px-6 py-4">{item.nlt}</td>
-                      <td className="px-6 py-4">{item.domain}</td>
-                      <td className="px-6 py-4">{item.owner}</td>
-                      <td className="px-6 py-4">{item.stage}</td>
-                      <td className="px-6 py-4">{item.goLive}</td>
+                  {data.map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-100">
+                      <td className="px-6 py-4">{row.process}</td>
+                      <td className="px-6 py-4">{row.nlt}</td>
+                      <td className="px-6 py-4">{row.domain}</td>
+                      <td className="px-6 py-4">{row.owner}</td>
+                      <td className="px-6 py-4">{row.stage}</td>
+                      <td className="px-6 py-4">{row.goLive}</td>
                     </tr>
                   ))}
                 </tbody>
