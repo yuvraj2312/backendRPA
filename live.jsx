@@ -31,6 +31,8 @@ const LivePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 20;
 
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Manage sidebar state (open/collapsed)
+
   const fetchDomains = async () => {
     try {
       const res = await fetch("http://localhost:5000/get_domains");
@@ -50,7 +52,7 @@ const LivePage = () => {
       const { startDate, endDate } = filters.goLiveRange;
       if (startDate && endDate) {
         params.append("startDate", startDate.toISOString().slice(0, 10));
-        params.append("endDate",   endDate.toISOString().slice(0, 10));
+        params.append("endDate", endDate.toISOString().slice(0, 10));
       }
       const res = await fetch(`http://localhost:5000/processlist?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch data");
@@ -125,16 +127,16 @@ const LivePage = () => {
   const paginatedData = data.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100">
+    <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar Fixed */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-20">
+      <div className={`fixed inset-y-0 left-0 transition-all duration-300 z-20 ${sidebarOpen ? 'w-64' : 'w-16'}`}>
         <Sidebar />
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col flex-1 ml-64">
+      <div className={`flex flex-col flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'}`}>
         <Header />
-        <div className="p-6">
+        <div className="p-6 overflow-auto">
 
           {/* Filters */}
           <div className="flex items-end gap-4 mb-6 flex-wrap">
