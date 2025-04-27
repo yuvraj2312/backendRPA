@@ -129,7 +129,9 @@ const LivePage = () => {
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Sidebar Fixed */}
-      <div className={`fixed inset-y-0 left-0 transition-all duration-300 z-20 ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+      <div
+        className={`fixed inset-y-0 left-0 transition-all duration-300 z-20 ${sidebarOpen ? 'w-64' : 'w-16'}`}
+      >
         <Sidebar />
       </div>
 
