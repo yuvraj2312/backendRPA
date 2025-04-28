@@ -1,20 +1,23 @@
 import React from 'react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid
+} from 'recharts';
 
 const EnhancedChart = ({ barLabels, barData, lineLabels, lineData, kpis }) => {
-  const combinedBarData = barLabels.map((label, idx) => ({
+  // Fallback values to prevent rendering errors
+  const combinedBarData = barLabels?.map((label, idx) => ({
     name: label,
-    Series1: barData[0]?.[idx] ?? 0,
-    Series2: barData[1]?.[idx] ?? 0,
-    Series3: barData[2]?.[idx] ?? 0,
-  }));
+    Series1: barData?.[0]?.[idx] ?? 0,
+    Series2: barData?.[1]?.[idx] ?? 0,
+    Series3: barData?.[2]?.[idx] ?? 0,
+  })) || [];
 
-  const combinedLineData = lineLabels.map((label, idx) => ({
+  const combinedLineData = lineLabels?.map((label, idx) => ({
     name: label,
-    Series1: lineData[0]?.[idx] ?? 0,
-    Series2: lineData[1]?.[idx] ?? 0,
-    Series3: lineData[2]?.[idx] ?? 0,
-  }));
+    Series1: lineData?.[0]?.[idx] ?? 0,
+    Series2: lineData?.[1]?.[idx] ?? 0,
+    Series3: lineData?.[2]?.[idx] ?? 0,
+  })) || [];
 
   return (
     <div className="grid grid-cols-1 gap-4">
