@@ -1,13 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 
 const LandingPage = () => {
@@ -30,7 +24,6 @@ const LandingPage = () => {
   const [headings, setHeadings] = useState([]);
   const [successCount, setSuccessCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
-
   const [barChartDataToday, setBarChartDataToday] = useState([]);
   const [barChartDataMonthly, setBarChartDataMonthly] = useState([]);
 
@@ -49,31 +42,24 @@ const LandingPage = () => {
     }
   };
 
+  const parseBarData = (rawData) => {
+    if (!rawData || rawData.length < 3) return [];
+    return [
+      { label: 'Processed', value: rawData[0][0] },
+      { label: 'Success', value: rawData[1][0] },
+      { label: 'Failed', value: rawData[2][0] }
+    ];
+  };
+
   const fetchMainData = async () => {
     try {
       const res = await axios.get('/');
-
       setTableData(res.data.data);
       setHeadings(res.data.headings);
       setSuccessCount(res.data.SuccessCount);
       setFailedCount(res.data.FailedCount);
-
-      // Convert bardata1 and bardata2
-      const labels = res.data.d_n || [];
-
-      const todayChart = res.data.bardata1.map((val, idx) => ({
-        label: labels[idx] || `Label ${idx + 1}`,
-        Value: val[0]
-      }));
-
-      const monthlyChart = res.data.bardata2.map((val, idx) => ({
-        label: labels[idx] || `Label ${idx + 1}`,
-        Value: val[0]
-      }));
-
-      setBarChartDataToday(todayChart);
-      setBarChartDataMonthly(monthlyChart);
-
+      setBarChartDataToday(parseBarData(res.data.bardata1));
+      setBarChartDataMonthly(parseBarData(res.data.bardata2));
     } catch (error) {
       console.error('Error fetching main data:', error);
     }
@@ -174,7 +160,6 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Search */}
       <button
         onClick={handleSearch}
         className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -182,7 +167,7 @@ const LandingPage = () => {
         Search
       </button>
 
-      {/* Bar Graphs */}
+      {/* Bar Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-gray-100 p-4 rounded shadow h-64">
           <h2 className="text-lg font-semibold mb-2 text-center">Today Summary</h2>
@@ -192,7 +177,7 @@ const LandingPage = () => {
               <XAxis dataKey="label" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="Value" fill="#4CAF50" />
+              <Bar dataKey="value" fill="#4CAF50" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -205,7 +190,7 @@ const LandingPage = () => {
               <XAxis dataKey="label" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="Value" fill="#2196F3" />
+              <Bar dataKey="value" fill="#2196F3" />
             </BarChart>
           </ResponsiveContainer>
         </div>
