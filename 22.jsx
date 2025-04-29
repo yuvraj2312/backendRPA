@@ -8,6 +8,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend
 } from 'recharts';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -68,12 +69,16 @@ const LandingPage = () => {
 
       const todayChart = res.data.bardata1.map((val, idx) => ({
         label: labels[idx] || `Label ${idx + 1}`,
-        Value: val[0]
+        Processed: val[0] || 0,
+        Success: val[1] || 0,
+        Failed: val[2] || 0
       }));
 
       const monthlyChart = res.data.bardata2.map((val, idx) => ({
         label: labels[idx] || `Label ${idx + 1}`,
-        Value: val[0]
+        Processed: val[0] || 0,
+        Success: val[1] || 0,
+        Failed: val[2] || 0
       }));
 
       setBarChartDataToday(todayChart);
@@ -198,15 +203,6 @@ const LandingPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium">Domain Name</label>
-              <select name="domain" value={filters.domain} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
-                <option value="">All</option>
-                {dropdownOptions.domains1.map((domain) => (
-                  <option key={domain} value={domain}>{domain}</option>
-                ))}
-              </select>
-            </div>
-            <div>
               <label className="block text-sm font-medium">Process Name</label>
               <select name="processname" value={filters.processname} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
                 <option value="">All</option>
@@ -239,7 +235,7 @@ const LandingPage = () => {
 
           {/* Bar Graphs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-100 p-4 rounded shadow h-64">
+            <div className="bg-gray-100 p-4 rounded shadow h-72">
               <h2 className="text-lg font-semibold mb-2 text-center">Today Summary</h2>
               <ResponsiveContainer width="100%" height="90%">
                 <BarChart data={barChartDataToday}>
@@ -247,11 +243,14 @@ const LandingPage = () => {
                   <XAxis dataKey="label" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="Value" fill="#4CAF50" />
+                  <Legend />
+                  <Bar dataKey="Processed" fill="#8884d8" />
+                  <Bar dataKey="Success" fill="#4CAF50" />
+                  <Bar dataKey="Failed" fill="#F44336" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="bg-gray-100 p-4 rounded shadow h-64">
+            <div className="bg-gray-100 p-4 rounded shadow h-72">
               <h2 className="text-lg font-semibold mb-2 text-center">Monthly Summary</h2>
               <ResponsiveContainer width="100%" height="90%">
                 <BarChart data={barChartDataMonthly}>
@@ -259,7 +258,10 @@ const LandingPage = () => {
                   <XAxis dataKey="label" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="Value" fill="#2196F3" />
+                  <Legend />
+                  <Bar dataKey="Processed" fill="#8884d8" />
+                  <Bar dataKey="Success" fill="#4CAF50" />
+                  <Bar dataKey="Failed" fill="#F44336" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
