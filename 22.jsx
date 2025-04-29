@@ -39,6 +39,8 @@ const LandingPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
 
+  const [visibleColumns, setVisibleColumns] = useState(new Set());
+
   const fetchDropdowns = async () => {
     try {
       const res = await axios.get('/get_domains', {
@@ -184,6 +186,18 @@ const LandingPage = () => {
     return months[currentMonth];
   };
 
+  const handleColumnVisibilityChange = (column) => {
+    setVisibleColumns((prev) => {
+      const newVisibleColumns = new Set(prev);
+      if (newVisibleColumns.has(column)) {
+        newVisibleColumns.delete(column);
+      } else {
+        newVisibleColumns.add(column);
+      }
+      return newVisibleColumns;
+    });
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
@@ -243,6 +257,25 @@ const LandingPage = () => {
             Search
           </button>
 
+          {/* Column Visibility Dropdown */}
+          <div className="mt-6">
+            <label className="block text-sm font-medium">Column Visibility</label>
+            <div className="flex gap-4">
+              {headings.map((heading, index) => (
+                <div key={index} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={heading}
+                    checked={visibleColumns.has(heading)}
+                    onChange={() => handleColumnVisibilityChange(heading)}
+                    className="mr-2"
+                  />
+                  <label htmlFor={heading} className="text-sm">{heading}</label>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Bar Graphs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gray-100 p-4 rounded shadow h-64">
@@ -287,7 +320,9 @@ const LandingPage = () => {
               <thead className="bg-gray-200 text-left">
                 <tr>
                   {headings.map((head, index) => (
-                    <th key={index} className="px-4 py-2 border">{head}</th>
+                    visibleColumns.has(head) && (
+                      <th key={index} className="px-4 py-2 border">{head}</th>
+                    )
                   ))}
                 </tr>
               </thead>
@@ -295,7 +330,9 @@ const LandingPage = () => {
                 {paginatedData.map((row, rowIndex) => (
                   <tr key={rowIndex} className="hover:bg-gray-50">
                     {row.map((cell, colIndex) => (
-                      <td key={colIndex} className="px-4 py-2 border">{cell}</td>
+                      visibleColumns.has(headings[colIndex]) && (
+                        <td key={colIndex} className="px-4 py-2 border">{cell}</td>
+                      )
                     ))}
                   </tr>
                 ))}
