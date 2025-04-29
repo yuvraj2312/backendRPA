@@ -62,7 +62,7 @@ const LandingPage = () => {
       setHeadings(res.data.headings);
       setSuccessCount(res.data.SuccessCount);
       setFailedCount(res.data.FailedCount);
-      setCurrentPage(1); // Reset to first page on data fetch
+      setCurrentPage(1);
 
       const labels = res.data.d_n || [];
 
@@ -97,7 +97,6 @@ const LandingPage = () => {
     fetchMainData();
   };
 
-  // Pagination Logic
   const totalPages = Math.ceil(tableData.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const paginatedData = tableData.slice(startIndex, startIndex + rowsPerPage);
@@ -110,19 +109,42 @@ const LandingPage = () => {
 
   const renderPagination = () => {
     const pageNumbers = [];
-    for (let i = 1; i <= totalPages; i++) {
+    const maxPagesToShow = 5;
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = startPage + maxPagesToShow - 1;
+
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
 
     return (
-      <div className="flex justify-center mt-4 space-x-2">
+      <div className="flex justify-center mt-4 space-x-2 items-center">
         <button
           onClick={() => changePage(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
         >
           Prev
         </button>
+
+        {startPage > 1 && (
+          <>
+            <button
+              onClick={() => changePage(1)}
+              className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="px-2">...</span>}
+          </>
+        )}
+
         {pageNumbers.map((num) => (
           <button
             key={num}
@@ -132,10 +154,23 @@ const LandingPage = () => {
             {num}
           </button>
         ))}
+
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="px-2">...</span>}
+            <button
+              onClick={() => changePage(totalPages)}
+              className={`px-3 py-1 rounded border ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+
         <button
           onClick={() => changePage(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
         >
           Next
         </button>
@@ -145,10 +180,8 @@ const LandingPage = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main content area */}
       <div className="flex flex-col flex-1 overflow-y-auto">
         <Header />
 
@@ -200,7 +233,6 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Search Button */}
           <button onClick={handleSearch} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             Search
           </button>
@@ -243,7 +275,7 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Table with Pagination */}
+          {/* Table */}
           <div className="overflow-x-auto mt-8">
             <table className="min-w-full border border-gray-300 text-sm">
               <thead className="bg-gray-200 text-left">
@@ -264,7 +296,6 @@ const LandingPage = () => {
               </tbody>
             </table>
 
-            {/* Pagination Controls */}
             {renderPagination()}
           </div>
         </div>
