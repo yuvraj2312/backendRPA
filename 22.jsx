@@ -36,6 +36,9 @@ const LandingPage = () => {
   const [barChartDataToday, setBarChartDataToday] = useState([]);
   const [barChartDataMonthly, setBarChartDataMonthly] = useState([]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+
   const fetchDropdowns = async () => {
     try {
       const res = await axios.get('/get_domains', {
@@ -59,6 +62,7 @@ const LandingPage = () => {
       setHeadings(res.data.headings);
       setSuccessCount(res.data.SuccessCount);
       setFailedCount(res.data.FailedCount);
+      setCurrentPage(1); // Reset to first page on data fetch
 
       const labels = res.data.d_n || [];
 
@@ -93,6 +97,52 @@ const LandingPage = () => {
     fetchMainData();
   };
 
+  // Pagination Logic
+  const totalPages = Math.ceil(tableData.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const paginatedData = tableData.slice(startIndex, startIndex + rowsPerPage);
+
+  const changePage = (pageNum) => {
+    if (pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+    }
+  };
+
+  const renderPagination = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
+
+    return (
+      <div className="flex justify-center mt-4 space-x-2">
+        <button
+          onClick={() => changePage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+        >
+          Prev
+        </button>
+        {pageNumbers.map((num) => (
+          <button
+            key={num}
+            onClick={() => changePage(num)}
+            className={`px-3 py-1 rounded border ${currentPage === num ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+          >
+            {num}
+          </button>
+        ))}
+        <button
+          onClick={() => changePage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Sidebar */}
@@ -100,23 +150,14 @@ const LandingPage = () => {
 
       {/* Main content area */}
       <div className="flex flex-col flex-1 overflow-y-auto">
-        {/* Header */}
         <Header />
 
-        {/* Content */}
         <div className="p-6 space-y-8">
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {/* Same filter inputs as before */}
-            {/** ... all 6 filters ... */}
             <div>
               <label className="block text-sm font-medium">NLT Name</label>
-              <select
-                name="username"
-                value={filters.username}
-                onChange={handleInputChange}
-                className="w-full mt-1 border rounded px-2 py-1"
-              >
+              <select name="username" value={filters.username} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
                 <option value="">All</option>
                 {dropdownOptions.usernames1.map((user) => (
                   <option key={user} value={user}>{user}</option>
@@ -125,12 +166,7 @@ const LandingPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium">Domain Name</label>
-              <select
-                name="domain"
-                value={filters.domain}
-                onChange={handleInputChange}
-                className="w-full mt-1 border rounded px-2 py-1"
-              >
+              <select name="domain" value={filters.domain} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
                 <option value="">All</option>
                 {dropdownOptions.domains1.map((domain) => (
                   <option key={domain} value={domain}>{domain}</option>
@@ -139,12 +175,7 @@ const LandingPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium">Process Name</label>
-              <select
-                name="processname"
-                value={filters.processname}
-                onChange={handleInputChange}
-                className="w-full mt-1 border rounded px-2 py-1"
-              >
+              <select name="processname" value={filters.processname} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
                 <option value="">All</option>
                 {dropdownOptions.processes1.map((proc) => (
                   <option key={proc} value={proc}>{proc}</option>
@@ -153,12 +184,7 @@ const LandingPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium">Status</label>
-              <select
-                name="status"
-                value={filters.status}
-                onChange={handleInputChange}
-                className="w-full mt-1 border rounded px-2 py-1"
-              >
+              <select name="status" value={filters.status} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
                 <option value="">All</option>
                 <option value="Success">Success</option>
                 <option value="Failed">Failed</option>
@@ -166,31 +192,16 @@ const LandingPage = () => {
             </div>
             <div>
               <label className="block text-sm font-medium">Start Date</label>
-              <input
-                type="date"
-                name="startDate"
-                value={filters.startDate}
-                onChange={handleInputChange}
-                className="w-full mt-1 border rounded px-2 py-1"
-              />
+              <input type="date" name="startDate" value={filters.startDate} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1" />
             </div>
             <div>
               <label className="block text-sm font-medium">End Date</label>
-              <input
-                type="date"
-                name="endDate"
-                value={filters.endDate}
-                onChange={handleInputChange}
-                className="w-full mt-1 border rounded px-2 py-1"
-              />
+              <input type="date" name="endDate" value={filters.endDate} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1" />
             </div>
           </div>
 
-          {/* Search */}
-          <button
-            onClick={handleSearch}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
+          {/* Search Button */}
+          <button onClick={handleSearch} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             Search
           </button>
 
@@ -232,7 +243,7 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Table */}
+          {/* Table with Pagination */}
           <div className="overflow-x-auto mt-8">
             <table className="min-w-full border border-gray-300 text-sm">
               <thead className="bg-gray-200 text-left">
@@ -243,7 +254,7 @@ const LandingPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {tableData.map((row, rowIndex) => (
+                {paginatedData.map((row, rowIndex) => (
                   <tr key={rowIndex} className="hover:bg-gray-50">
                     {row.map((cell, colIndex) => (
                       <td key={colIndex} className="px-4 py-2 border">{cell}</td>
@@ -252,6 +263,9 @@ const LandingPage = () => {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {renderPagination()}
           </div>
         </div>
       </div>
