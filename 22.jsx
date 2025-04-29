@@ -64,21 +64,20 @@ const LandingPage = () => {
       setFailedCount(res.data.FailedCount);
       setCurrentPage(1);
 
-      // Update bar chart data
-      const today = res.data.todaySummary || { processed: 0, success: 0, failed: 0 };
-      const month = res.data.monthSummary || { processed: 0, success: 0, failed: 0 };
+      const todayChart = [
+        { label: 'Total', Value: res.data.bardata1[0][0] || 0 },
+        { label: 'Success', Value: res.data.bardata1[1][0] || 0 },
+        { label: 'Failed', Value: res.data.bardata1[2][0] || 0 }
+      ];
 
-      setBarChartDataToday([
-        { label: 'Processed', Value: today.processed },
-        { label: 'Success', Value: today.success },
-        { label: 'Failed', Value: today.failed }
-      ]);
+      const monthlyChart = [
+        { label: 'Total', Value: res.data.bardata2[0][0] || 0 },
+        { label: 'Success', Value: res.data.bardata2[1][0] || 0 },
+        { label: 'Failed', Value: res.data.bardata2[2][0] || 0 }
+      ];
 
-      setBarChartDataMonthly([
-        { label: 'Processed', Value: month.processed },
-        { label: 'Success', Value: month.success },
-        { label: 'Failed', Value: month.failed }
-      ]);
+      setBarChartDataToday(todayChart);
+      setBarChartDataMonthly(monthlyChart);
     } catch (error) {
       console.error('Error fetching main data:', error);
     }
@@ -111,68 +110,43 @@ const LandingPage = () => {
   const renderPagination = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5;
-
     let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = startPage + maxPagesToShow - 1;
-
     if (endPage > totalPages) {
       endPage = totalPages;
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-
     for (let i = startPage; i <= endPage; i++) {
       pageNumbers.push(i);
     }
 
     return (
       <div className="flex justify-center mt-4 space-x-2 items-center">
-        <button
-          onClick={() => changePage(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-        >
+        <button onClick={() => changePage(currentPage - 1)} disabled={currentPage === 1} className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50">
           Prev
         </button>
-
         {startPage > 1 && (
           <>
-            <button
-              onClick={() => changePage(1)}
-              className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-            >
+            <button onClick={() => changePage(1)} className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>
               1
             </button>
             {startPage > 2 && <span className="px-2">...</span>}
           </>
         )}
-
         {pageNumbers.map((num) => (
-          <button
-            key={num}
-            onClick={() => changePage(num)}
-            className={`px-3 py-1 rounded border ${currentPage === num ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-          >
+          <button key={num} onClick={() => changePage(num)} className={`px-3 py-1 rounded border ${currentPage === num ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>
             {num}
           </button>
         ))}
-
         {endPage < totalPages && (
           <>
             {endPage < totalPages - 1 && <span className="px-2">...</span>}
-            <button
-              onClick={() => changePage(totalPages)}
-              className={`px-3 py-1 rounded border ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-            >
+            <button onClick={() => changePage(totalPages)} className={`px-3 py-1 rounded border ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>
               {totalPages}
             </button>
           </>
         )}
-
-        <button
-          onClick={() => changePage(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-        >
+        <button onClick={() => changePage(currentPage + 1)} disabled={currentPage === totalPages} className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50">
           Next
         </button>
       </div>
@@ -182,11 +156,10 @@ const LandingPage = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
-
       <div className="flex flex-col flex-1 overflow-y-auto">
         <Header />
-
         <div className="p-6 space-y-8">
+
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
@@ -238,7 +211,7 @@ const LandingPage = () => {
             Search
           </button>
 
-          {/* Bar Graphs */}
+          {/* Bar Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-gray-100 p-4 rounded shadow h-64">
               <h2 className="text-lg font-semibold mb-2 text-center">Today Summary</h2>
@@ -246,7 +219,7 @@ const LandingPage = () => {
                 <BarChart data={barChartDataToday}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" />
-                  <YAxis />
+                  <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Bar dataKey="Value" fill="#4CAF50" />
                 </BarChart>
@@ -258,7 +231,7 @@ const LandingPage = () => {
                 <BarChart data={barChartDataMonthly}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" />
-                  <YAxis />
+                  <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Bar dataKey="Value" fill="#2196F3" />
                 </BarChart>
@@ -268,12 +241,8 @@ const LandingPage = () => {
 
           {/* KPI Counts */}
           <div className="flex gap-6 mt-6">
-            <div className="bg-green-100 text-green-700 px-4 py-2 rounded shadow">
-              ✅ Success Count: {successCount}
-            </div>
-            <div className="bg-red-100 text-red-700 px-4 py-2 rounded shadow">
-              ❌ Failed Count: {failedCount}
-            </div>
+            <div className="bg-green-100 text-green-700 px-4 py-2 rounded shadow">✅ Success Count: {successCount}</div>
+            <div className="bg-red-100 text-red-700 px-4 py-2 rounded shadow">❌ Failed Count: {failedCount}</div>
           </div>
 
           {/* Table */}
@@ -296,7 +265,6 @@ const LandingPage = () => {
                 ))}
               </tbody>
             </table>
-
             {renderPagination()}
           </div>
         </div>
