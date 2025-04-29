@@ -9,6 +9,8 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
 
 const LandingPage = () => {
   const [filters, setFilters] = useState({
@@ -72,7 +74,6 @@ const LandingPage = () => {
 
       setBarChartDataToday(todayChart);
       setBarChartDataMonthly(monthlyChart);
-
     } catch (error) {
       console.error('Error fetching main data:', error);
     }
@@ -93,29 +94,21 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-800 text-white p-4">
-        <h2 className="text-xl font-semibold mb-6">Dashboard</h2>
-        <ul className="space-y-4">
-          <li className="hover:text-gray-300 cursor-pointer">Home</li>
-          <li className="hover:text-gray-300 cursor-pointer">Reports</li>
-          <li className="hover:text-gray-300 cursor-pointer">Settings</li>
-        </ul>
-      </aside>
+      <Sidebar />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      {/* Main content area */}
+      <div className="flex flex-col flex-1 overflow-y-auto">
         {/* Header */}
-        <header className="bg-white shadow p-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Landing Page</h1>
-          <div className="text-gray-600">Welcome, User</div>
-        </header>
+        <Header />
 
-        {/* Page Content */}
-        <main className="p-6 space-y-8 overflow-y-auto">
+        {/* Content */}
+        <div className="p-6 space-y-8">
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {/* Same filter inputs as before */}
+            {/** ... all 6 filters ... */}
             <div>
               <label className="block text-sm font-medium">NLT Name</label>
               <select
@@ -215,7 +208,6 @@ const LandingPage = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-
             <div className="bg-gray-100 p-4 rounded shadow h-64">
               <h2 className="text-lg font-semibold mb-2 text-center">Monthly Summary</h2>
               <ResponsiveContainer width="100%" height="90%">
@@ -261,7 +253,7 @@ const LandingPage = () => {
               </tbody>
             </table>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
