@@ -67,16 +67,17 @@ const LandingPage = () => {
 
       const labels = res.data.d_n || [];
 
+      // Assuming each val is [volume, success, failed]
       const todayChart = res.data.bardata1.map((val, idx) => ({
         label: labels[idx] || `Label ${idx + 1}`,
-        Processed: val[0] || 0,
+        Volume: val[0] || 0,
         Success: val[1] || 0,
         Failed: val[2] || 0
       }));
 
       const monthlyChart = res.data.bardata2.map((val, idx) => ({
         label: labels[idx] || `Label ${idx + 1}`,
-        Processed: val[0] || 0,
+        Volume: val[0] || 0,
         Success: val[1] || 0,
         Failed: val[2] || 0
       }));
@@ -193,24 +194,21 @@ const LandingPage = () => {
         <div className="p-6 space-y-8">
           {/* Filters */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium">NLT Name</label>
-              <select name="username" value={filters.username} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
-                <option value="">All</option>
-                {dropdownOptions.usernames1.map((user) => (
-                  <option key={user} value={user}>{user}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium">Process Name</label>
-              <select name="processname" value={filters.processname} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
-                <option value="">All</option>
-                {dropdownOptions.processes1.map((proc) => (
-                  <option key={proc} value={proc}>{proc}</option>
-                ))}
-              </select>
-            </div>
+            {/* Dropdowns */}
+            {['username', 'domain', 'processname'].map((key) => (
+              <div key={key}>
+                <label className="block text-sm font-medium">
+                  {key === 'username' ? 'NLT Name' : key === 'domain' ? 'Domain Name' : 'Process Name'}
+                </label>
+                <select name={key} value={filters[key]} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
+                  <option value="">All</option>
+                  {dropdownOptions[`${key}s1`]?.map((val) => (
+                    <option key={val} value={val}>{val}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+
             <div>
               <label className="block text-sm font-medium">Status</label>
               <select name="status" value={filters.status} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
@@ -233,41 +231,29 @@ const LandingPage = () => {
             Search
           </button>
 
-          {/* Bar Graphs */}
+          {/* Bar Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gray-100 p-4 rounded shadow h-72">
-              <h2 className="text-lg font-semibold mb-2 text-center">Today Summary</h2>
-              <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={barChartDataToday}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="label" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Processed" fill="#8884d8" />
-                  <Bar dataKey="Success" fill="#4CAF50" />
-                  <Bar dataKey="Failed" fill="#F44336" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-gray-100 p-4 rounded shadow h-72">
-              <h2 className="text-lg font-semibold mb-2 text-center">Monthly Summary</h2>
-              <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={barChartDataMonthly}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="label" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="Processed" fill="#8884d8" />
-                  <Bar dataKey="Success" fill="#4CAF50" />
-                  <Bar dataKey="Failed" fill="#F44336" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {[{ title: 'Today Summary', data: barChartDataToday, colors: ['#8884d8', '#4CAF50', '#F44336'] },
+              { title: 'Monthly Summary', data: barChartDataMonthly, colors: ['#8884d8', '#4CAF50', '#F44336'] }].map((chart, idx) => (
+              <div key={idx} className="bg-gray-100 p-4 rounded shadow h-64">
+                <h2 className="text-lg font-semibold mb-2 text-center">{chart.title}</h2>
+                <ResponsiveContainer width="100%" height="90%">
+                  <BarChart data={chart.data}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="Volume" fill={chart.colors[0]} />
+                    <Bar dataKey="Success" fill={chart.colors[1]} />
+                    <Bar dataKey="Failed" fill={chart.colors[2]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ))}
           </div>
 
-          {/* KPI Counts */}
+          {/* KPIs */}
           <div className="flex gap-6 mt-6">
             <div className="bg-green-100 text-green-700 px-4 py-2 rounded shadow">
               ✅ Success Count: {successCount}
@@ -297,7 +283,6 @@ const LandingPage = () => {
                 ))}
               </tbody>
             </table>
-
             {renderPagination()}
           </div>
         </div>
