@@ -1,133 +1,178 @@
-@app.route('/api/process-search', methods=['POST'])
-@token_required
-def process_search():
+@app.route('/ProcessSearch', methods=['GET', 'POST'])
+def ProcessSearch():
+    connection = None
+    cur = None
     try:
-        data = request.json
-        pn = data.get('Process_name', "").strip()
-        un = data.get('User_name', "").strip()
-        sn = data.get('Status_name', "").strip()
-        dn = data.get('Domain_name', "").strip()
-        date1 = data.get('date1', "").strip()
-        date2 = data.get('date2', "").strip()
-
         connection = get_connection()
         cur = connection.cursor()
 
-        # Fetch data
-        fetchdata = fetch_process_data(cur, pn, un, sn, dn, date1, date2)
+        # Get filter parameters
+        pn = request.form.get('Process_name', "")
+        un = request.form.get('User_name', "")
+        sn = request.form.get('Status_name', "")
+        dn = request.form.get('Domain_name', "")
+        date1 = request.form.get('date1', "")
+        date2 = request.form.get('date2', "")
 
-        # Count Success/Failure
-        SuccessCount = sum(1 for x in fetchdata if 'Success' in x[6])
-        FailedCount = sum(1 for x in fetchdata if 'Failure' in x[6])
+        # Build query dynamically based on filter criteria
+        query = build_query(pn, un, sn, dn, date1, date2)
+        params = build_query_params(pn, un, sn, dn, date1, date2)
 
-        fetchdata = sorted(fetchdata, key=lambda x: parse_time(x[10]), reverse=True)
-        headings = fetch_headings(cur)
-        p_n, u_n, d_n = fetch_dropdown_options(cur, un, dn)
-        finaldata, headings = process_final_data(fetchdata, headings)
-        l1, l2, ld, bd = prepare_graph_data(finaldata)
+        # Execute query to fetch filtered data
+        cur.execute(query, params)
+        fetchdata = cur.fetchall()
 
+        # Process success and failure counts
+        success_count, failure_count = calculate_counts(fetchdata)
+
+        # Get headings for the table
+        headings = get_table_headings(cur)
+
+        # Prepare the filtered process names, domains, and NLT data for dropdowns
+        dropdown_data = get_dropdown_data(cur, un, dn)
+
+        # Add duration column to data
+        finaldata = add_duration_column(fetchdata)
+
+        # Prepare data for charts (bar and line graphs)
+        bar_chart_data = prepare_bar_chart_data(finaldata)
+        line_chart_data = prepare_line_chart_data(bar_chart_data)
+
+        # Cache the processed final data for quick access
+        cache.set('finaldata_key', finaldata)
+
+        # Return the optimized response for React frontend
         return jsonify({
-            "headings": headings,
-            "finaldata": finaldata,
-            "SuccessCount": SuccessCount,
-            "FailedCount": FailedCount,
-            "dropdowns": {
-                "process_names": p_n,
-                "users": u_n,
-                "domains": d_n
-            },
-            "graphs": {
-                "line": {"labels": l1, "datasets": ld},
-                "bar": {"labels": l2, "datasets": bd}
-            }
-        }), 200
+            'finaldata': finaldata,
+            'headings': headings,
+            'dropdown_data': dropdown_data,
+            'success_count': success_count,
+            'failure_count': failure_count,
+            'bar_chart_data': bar_chart_data,
+            'line_chart_data': line_chart_data,
+        })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': str(e)})
 
     finally:
-        if cur: cur.close()
-        if connection: connection.close()
+        if cur:
+            cur.close()
+        if connection:
+            connection.close()
 
 
-def fetch_process_data(cur, pn, un, sn, dn, date1, date2):
-    # Build and execute queries based on date filters
-    # Return combined fetchdata
-    # Implement your logic here
-    pass
+def build_query(pn, un, sn, dn, date1, date2):
+    base_query = "SELECT ProcessName, NewProcessName, SME, Jira_ID, Date, ProcessType, Status, VolumeProcessed, SuccessVolume, FailedVolume, StartTime, EndTime, Output FROM [RPA_Prod_TransactionLog] "
+    conditions = []
 
-def parse_time(timestamp):
-    try:
-        return datetime.strptime(timestamp, '%d-%m-%Y %H:%M:%S')
-    except:
-        return datetime.min
+    # Filtering conditions
+    if date1 and date2:
+        conditions.append("Date BETWEEN ? AND ?")
+    elif date1:
+        conditions.append("Date >= ?")
+    elif date2:
+        conditions.append("Date <= ?")
 
-def fetch_headings(cur):
-    cur.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='RPA_Dashboard_Table_Header'")
-    return [i[0] for i in cur.fetchall()]
+    if sn:
+        conditions.append("Status LIKE ?")
+    if un:
+        conditions.append("NLT LIKE ?")
+    if dn:
+        conditions.append("DomainName LIKE ?")
+    if pn:
+        conditions.append("NewProcessName = ?")
 
-def fetch_dropdown_options(cur, un, dn):
-    # Fetch Process Names
-    cur.execute("SELECT DISTINCT(NewProcessName) FROM [Prod_NLT_List] WHERE [NLT] LIKE ? AND [DomainName] LIKE ?", (f'%{un}%', f'%{dn}%'))
-    p_n = [row[0] for row in cur.fetchall()]
+    if conditions:
+        query = base_query + " WHERE " + " AND ".join(conditions)
+    else:
+        query = base_query
 
-    # Fetch NLTs
-    cur.execute("SELECT DISTINCT(NLT) FROM [Prod_NLT_List]")
-    u_n = [row[0] for row in cur.fetchall()]
+    query += " ORDER BY EndTime DESC"
+    return query
 
-    # Fetch Domain Names
-    cur.execute("SELECT DISTINCT(DomainName) FROM [Prod_NLT_List]")
-    d_n = [row[0] for row in cur.fetchall()]
 
-    return p_n, u_n, d_n
+def build_query_params(pn, un, sn, dn, date1, date2):
+    params = []
+    if date1:
+        params.append(date1)
+    if date2:
+        params.append(date2)
+    if sn:
+        params.append(f'%{sn}%')
+    if un:
+        params.append(f'%{un}%')
+    if dn:
+        params.append(f'%{dn}%')
+    if pn:
+        params.append(pn)
+    return params
 
-def process_final_data(fetchdata, headings):
+
+def calculate_counts(fetchdata):
+    success_count = 0
+    failure_count = 0
+    for record in fetchdata:
+        if 'Success' in record[6]:
+            success_count += 1
+        elif 'Failure' in record[6]:
+            failure_count += 1
+    return success_count, failure_count
+
+
+def get_table_headings(cur):
+    cur.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='RPA_Prod_TransactionLog'")
+    headings = [i[0] for i in cur.fetchall()]
+    return headings
+
+
+def get_dropdown_data(cur, un, dn):
+    # Fetch distinct process names, domains, and NLT for dropdown filters
+    cur.execute("SELECT DISTINCT NewProcessName FROM Prod_NLT_List WHERE NLT LIKE ? AND DomainName LIKE ?", [f'%{un}%', f'%{dn}%'])
+    process_names = [row[0] for row in cur.fetchall()]
+
+    cur.execute("SELECT DISTINCT NLT FROM Prod_NLT_List")
+    nlt = [row[0] for row in cur.fetchall()]
+
+    cur.execute("SELECT DISTINCT DomainName FROM Prod_NLT_List")
+    domains = [row[0] for row in cur.fetchall()]
+
+    return {'process_names': process_names, 'nlt': nlt, 'domains': domains}
+
+
+def add_duration_column(fetchdata):
+    def time_difference(start, end):
+        try:
+            start_time = datetime.strptime(start, '%d-%m-%Y %H:%M:%S')
+            end_time = datetime.strptime(end, '%d-%m-%Y %H:%M:%S')
+            return str(end_time - start_time)
+        except:
+            return "NA"
+
     finaldata = []
-    for idx, fd in enumerate(fetchdata, start=1):
-        fd = list(fd)
-        fd.pop(0)  # Remove first element
-        if len(fd) == 14:
-            fd.pop()  # Remove last element if length is 14
-        duration = time_difference(fd[9], fd[10]) if fd[9] and fd[10] else "NA"
-        fd.insert(11, duration)
-        fd.insert(0, idx)  # Add serial number
-        finaldata.append(fd)
+    for record in fetchdata:
+        record = list(record)
+        duration = time_difference(record[9], record[10])
+        record.insert(11, duration)  # Insert duration
+        finaldata.append(record)
+    return finaldata
 
-    headings.insert(11, "Duration")
-    headings.insert(0, "S.No")
-    return finaldata, headings
 
-def prepare_graph_data(finaldata):
-    bd_dic = {}
-    for i in finaldata:
-        date_key = i[4]
-        if not date_key:
-            continue
-        volumes = i[7:10]
-        if any(v is None or v == "" for v in volumes):
-            continue
-        volumes = list(map(int, volumes))
-        if date_key not in bd_dic:
-            bd_dic[date_key] = volumes
-        else:
-            bd_dic[date_key] = [sum(x) for x in zip(bd_dic[date_key], volumes)]
+def prepare_bar_chart_data(finaldata):
+    # Prepare data for bar graph: Volume Processed, Success Volume, and Failed Volume
+    bar_data = {"process_name": [], "volume_processed": [], "success_volume": [], "failed_volume": []}
+    for record in finaldata:
+        if record[4]:  # If process name is not empty
+            bar_data["process_name"].append(record[4])
+            bar_data["volume_processed"].append(record[7])
+            bar_data["success_volume"].append(record[8])
+            bar_data["failed_volume"].append(record[9])
 
-    l2 = list(bd_dic.keys())
-    bd = [list(x) for x in zip(*bd_dic.values())]
+    return bar_data
 
-    # Prepare line graph data
-    dtm = {'01': "January", "02": "February", "03": "March", "04": "April",
-           "05": "May", "06": "June", "07": "July", "08": "August",
-           "09": "September", "10": "October", "11": "November", "12": "December"}
-    ld_dic = {}
-    for date_str in l2:
-        month = dtm.get(date_str[3:5], "") + date_str[5:]
-        if month not in ld_dic:
-            ld_dic[month] = bd_dic[date_str]
-        else:
-            ld_dic[month] = [sum(x) for x in zip(ld_dic[month], bd_dic[date_str])]
 
-    l1 = list(ld_dic.keys())
-    ld = [list(x) for x in zip(*ld_dic.values())]
-
-    return l1, l2, ld, bd
+def prepare_line_chart_data(bar_data):
+    # Prepare data for line graph by grouping by months (based on bar_data)
+    line_data = {"month": [], "volume_processed": [], "success_volume": [], "failed_volume": []}
+    # (This logic can be expanded to group by month and aggregate data)
+    return line_data
