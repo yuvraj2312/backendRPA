@@ -353,10 +353,11 @@ def index():
                 row.insert(0, i)
             headings.insert(0, "S.No")
 
-            # Bar Chart 1 (by ProcessName)
+            # Bar Chart 1 (Dynamic: By ProcessName or another field)
+            group_by_field = "ProcessName" if process_name else "DomainName"  # Adjust based on the filters
             bd_dic = {}
             for row in finaldata:
-                key = row[4]  # Process Name
+                key = row[4] if group_by_field == "ProcessName" else row[14]  # Group by ProcessName or DomainName
                 if not key:
                     continue
                 try:
@@ -373,7 +374,7 @@ def index():
             l2 = list(bd_dic.keys())
             bardata1 = [[vals[i] for vals in bd_dic.values()] for i in range(3)]
 
-            # Bar Chart 2 (by Month)
+            # Bar Chart 2 (Dynamic: Group by Month)
             dtm = {
                 "01": "January", "02": "February", "03": "March",
                 "04": "April", "05": "May", "06": "June",
@@ -400,7 +401,7 @@ def index():
             cache.set('finaldata_key', finaldata)
 
             return jsonify({
-                'l2': l2,            # Bar Chart 1 labels (Process Names)
+                'l2': l2,            # Bar Chart 1 labels (Process Names or Domain Names)
                 'bardata1': bardata1,  # Bar Chart 1 data
                 'l3': l3,            # Bar Chart 2 labels (Months)
                 'bardata2': bardata2,  # Bar Chart 2 data
