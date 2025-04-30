@@ -319,6 +319,7 @@ def index():
             """
             RFailedCount = RSuccessCount.replace("Success", "Fail")
 
+
             SuccessCount = get_count(TSuccessCount) + get_count(RSuccessCount)
             FailedCount = get_count(TFailedCount) + get_count(RFailedCount)
 
@@ -382,26 +383,30 @@ def index():
                 "10": "October", "11": "November", "12": "December"
             }
             ld_dic = {}
-            for i, key in enumerate(l2):
-                month = dtm.get(key[3:5])
+
+            # Aggregate data by month
+            for i, key in enumerate(l2):  # Assuming l2 contains Process Names
+                month = dtm.get(key[3:5])  # Extract month from Process Name
                 if not month:
                     continue
                 if month not in ld_dic:
                     ld_dic[month] = [bardata1[0][i], bardata1[1][i], bardata1[2][i]]
                 else:
-                    ld_dic[month][0] += bardata1[0][i]
-                    ld_dic[month][1] += bardata1[1][i]
-                    ld_dic[month][2] += bardata1[2][i]
+                    ld_dic[month][0] += bardata1[0][i]  # VolumeProcessed
+                    ld_dic[month][1] += bardata1[1][i]  # SuccessVolume
+                    ld_dic[month][2] += bardata1[2][i]  # FailedVolume
 
-            l3 = list(ld_dic.keys())
-            bardata2 = [[vals[i] for vals in ld_dic.values()] for i in range(3)]
+            # Prepare final bar chart data
+            l3 = list(ld_dic.keys())  # Months
+            bardata2 = [[vals[i] for vals in ld_dic.values()] for i in range(3)]  # [VolumeProcessed, SuccessVolume, FailedVolume]
+
 
             # Cache
             cache.delete('finaldata_key')
             cache.set('finaldata_key', finaldata)
 
             return jsonify({
-                'l2': l2,            # Bar Chart 1 labels (Process Names or Domain Names)
+                'l2': l2,            # Bar Chart 1 labels (Process Names)
                 'bardata1': bardata1,  # Bar Chart 1 data
                 'l3': l3,            # Bar Chart 2 labels (Months)
                 'bardata2': bardata2,  # Bar Chart 2 data
@@ -413,6 +418,7 @@ def index():
                 'SuccessCount': SuccessCount,
                 'FailedCount': FailedCount,
             })
+
 
 
     finally:
