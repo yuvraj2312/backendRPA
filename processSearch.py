@@ -235,16 +235,18 @@ def index():
             transactional_where = "WHERE 1=1"
             if process_name:
                 transactional_where += f" AND {table}.ProcessName = '{process_name}'"
-            if user_name:
-                transactional_where += f" AND PNL.NLT = '{user_name}'"
             if status_name:
                 transactional_where += f" AND {table}.Status = '{status_name}'"
-            if domain_name:
-                transactional_where += f" AND PNL.DomainName = '{domain_name}'"
             if start_date:
                 transactional_where += f" AND {table}.Date >= '{start_date}'"
             if end_date:
                 transactional_where += f" AND {table}.Date <= '{end_date}'"
+
+            post_join_conditions = ""
+            if user_name:
+                post_join_conditions += f" AND PNL.NLT = '{user_name}'"
+            if domain_name:
+                post_join_conditions += f" AND PNL.DomainName = '{domain_name}'"
 
             transactional_query = f"""
                 SELECT {column_selection}
@@ -253,11 +255,13 @@ def index():
                 {transactional_where}
                 AND {table}.ProcessType LIKE '%Transactional%'
                 AND {table}.Status NOT LIKE '%Progress%'
+                {post_join_conditions}
                 ORDER BY {table}.EndTime DESC
             """
             cur.execute(transactional_query)
             fetchdata = cur.fetchall()
 
+            # For non-transactional (CTE) query
             log_filters = "WHERE 1=1"
             if process_name:
                 log_filters += f" AND {table}.ProcessName = '{process_name}'"
@@ -267,12 +271,6 @@ def index():
                 log_filters += f" AND {table}.Date >= '{start_date}'"
             if end_date:
                 log_filters += f" AND {table}.Date <= '{end_date}'"
-
-            post_join_conditions = ""
-            if user_name:
-                post_join_conditions += f" AND PNL.NLT = '{user_name}'"
-            if domain_name:
-                post_join_conditions += f" AND PNL.DomainName = '{domain_name}'"
 
             cte_column_selection = column_selection.replace(table, 'CTE')
 
@@ -383,7 +381,8 @@ def index():
             l2 = list(bd_dic.keys())
             bardata1 = [[vals[i] for vals in bd_dic.values()] for i in range(3)]
 
-            dtm = {"01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June", "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}
+            dtm = {"01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June",
+                "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}
             ld_dic = {}
             for i, key in enumerate(l2):
                 month = dtm.get(key[3:5])
