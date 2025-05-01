@@ -202,7 +202,6 @@ def index():
         else:
             # Process Search (filtered data) logic
 
-            # Fetch the filter parameters from the request
             process_name = request.args.get('processname')
             user_name = request.args.get('username')
             status_name = request.args.get('status')
@@ -214,13 +213,12 @@ def index():
             cur = connection.cursor()
 
             table = "[ProcessData].[dbo].[RPA_Prod_TransactionLog]"
-            join_clause = f"LEFT JOIN [Prod_NLT_List] ON {table}.ProcessName = [Prod_NLT_List].ProcessName"
+            join_clause = f"LEFT JOIN [ProcessData].[dbo].[Prod_NLT_List] AS PNL ON {table}.ProcessName = PNL.ProcessName"
 
-            # Base column selection
             base_columns = [
                 f"{table}.ProcessName AS 'Process Name'",
-                "[Prod_NLT_List].NewProcessName",
-                "COALESCE([Prod_NLT_List].SME, 'NA') AS 'Process Owner'",
+                "PNL.NewProcessName",
+                "COALESCE(PNL.SME, 'NA') AS 'Process Owner'",
                 "[Jira_ID] AS 'Jira ID'",
                 f"{table}.Date",
                 f"{table}.ProcessType AS 'Process Type'",
@@ -234,37 +232,32 @@ def index():
             ]
             column_selection = ', '.join(base_columns)
 
-            # === Filters for transactional query (JOIN is already done) ===
             transactional_where = "WHERE 1=1"
             if process_name:
                 transactional_where += f" AND {table}.ProcessName = '{process_name}'"
             if user_name:
-                transactional_where += f" AND [Prod_NLT_List].NLT = '{user_name}'"
+                transactional_where += f" AND PNL.NLT = '{user_name}'"
             if status_name:
                 transactional_where += f" AND {table}.Status = '{status_name}'"
             if domain_name:
-                transactional_where += f" AND [Prod_NLT_List].DomainName = '{domain_name}'"
+                transactional_where += f" AND PNL.DomainName = '{domain_name}'"
             if start_date:
                 transactional_where += f" AND {table}.Date >= '{start_date}'"
             if end_date:
                 transactional_where += f" AND {table}.Date <= '{end_date}'"
 
-            # === Transactional Query ===
             transactional_query = f"""
                 SELECT {column_selection}
                 FROM {table}
                 {join_clause}
                 {transactional_where}
-                AND [ProcessType] LIKE '%Transactional%'
-                AND [Status] NOT LIKE '%Progress%'
-                ORDER BY [End Time] DESC
+                AND {table}.ProcessType LIKE '%Transactional%'
+                AND {table}.Status NOT LIKE '%Progress%'
+                ORDER BY {table}.EndTime DESC
             """
             cur.execute(transactional_query)
             fetchdata = cur.fetchall()
 
-            # === Non-Transactional Query ===
-
-            # Step 1: filters BEFORE join (only columns from base table)
             log_filters = "WHERE 1=1"
             if process_name:
                 log_filters += f" AND {table}.ProcessName = '{process_name}'"
@@ -275,16 +268,14 @@ def index():
             if end_date:
                 log_filters += f" AND {table}.Date <= '{end_date}'"
 
-            # Step 2: filters AFTER join (columns from [Prod_NLT_List])
             post_join_filters = "WHERE 1=1"
             if user_name:
-                post_join_filters += f" AND [Prod_NLT_List].NLT = '{user_name}'"
+                post_join_filters += f" AND PNL.NLT = '{user_name}'"
             if domain_name:
-                post_join_filters += f" AND [Prod_NLT_List].DomainName = '{domain_name}'"
+                post_join_filters += f" AND PNL.DomainName = '{domain_name}'"
 
-            cte_column_selection = column_selection.replace(table, '[CTE]')
+            cte_column_selection = column_selection.replace(table, '[CTE]').replace('PNL.', 'PNL.')
 
-            # Final non-transactional query
             non_transactional_query = f"""
                 WITH CTE AS (
                     SELECT *, ROW_NUMBER() OVER (
@@ -292,20 +283,18 @@ def index():
                     ) AS rn
                     FROM {table}
                     {log_filters}
-                    AND [ProcessType] NOT LIKE '%Transactional%' AND [ProcessType] IS NOT NULL
+                    AND ProcessType NOT LIKE '%Transactional%' AND ProcessType IS NOT NULL
                 )
                 SELECT {cte_column_selection}
                 FROM CTE
-                {join_clause.replace(table, 'CTE')}
+                LEFT JOIN [ProcessData].[dbo].[Prod_NLT_List] AS PNL ON CTE.ProcessName = PNL.ProcessName
                 {post_join_filters}
-                AND rn = 1 AND [Status] NOT LIKE '%Progress%'
-                ORDER BY [End Time] DESC
+                AND rn = 1 AND CTE.Status NOT LIKE '%Progress%'
+                ORDER BY CTE.EndTime DESC
             """
             cur.execute(non_transactional_query)
             fetchdata += cur.fetchall()
 
-
-            # Time sort
             def parse_time(timestamp):
                 try:
                     return datetime.strptime(timestamp, '%d-%m-%Y %H:%M:%S')
@@ -314,7 +303,7 @@ def index():
 
             fetchdata.sort(key=lambda row: parse_time(row[10]), reverse=True)
 
-            # Success & Failed Count Queries (same as above)
+            where_clause = transactional_where
             def get_count(query):
                 cur.execute(query)
                 return len(cur.fetchall())
@@ -322,9 +311,9 @@ def index():
             TSuccessCount = f"""
                 SELECT 1 FROM {table}
                 {where_clause}
-                AND [ProcessType] LIKE '%Transactional%'
-                AND [Status] LIKE '%Success%'
-                AND [Status] NOT LIKE '%Progress%'
+                AND ProcessType LIKE '%Transactional%'
+                AND Status LIKE '%Success%'
+                AND Status NOT LIKE '%Progress%'
             """
             TFailedCount = TSuccessCount.replace("Success", "Fail")
 
@@ -334,38 +323,34 @@ def index():
                         PARTITION BY Date, ProcessName ORDER BY StartTime DESC
                     ) AS rn
                     FROM {table}
-                    {where_clause}
-                    AND [ProcessType] NOT LIKE '%Transactional%' AND [ProcessType] IS NOT NULL
+                    {log_filters}
+                    AND ProcessType NOT LIKE '%Transactional%' AND ProcessType IS NOT NULL
                 )
                 SELECT 1 FROM CTE
-                WHERE rn = 1 AND [Status] LIKE '%Success%' AND [Status] NOT LIKE '%Progress%'
+                WHERE rn = 1 AND Status LIKE '%Success%' AND Status NOT LIKE '%Progress%'
             """
             RFailedCount = RSuccessCount.replace("Success", "Fail")
-
 
             SuccessCount = get_count(TSuccessCount) + get_count(RSuccessCount)
             FailedCount = get_count(TFailedCount) + get_count(RFailedCount)
 
-            # Fetch headings (same as above)
             cur.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='RPA_Dashboard_Table_Header'")
             headings = [row[0] for row in cur.fetchall()]
 
-            # Dropdown data (same as above)
             def get_unique_list(column):
-                cur.execute(f"SELECT DISTINCT({column}) FROM [Prod_NLT_List]")
+                cur.execute(f"SELECT DISTINCT({column}) FROM [ProcessData].[dbo].[Prod_NLT_List]")
                 return list({row[0] for row in cur.fetchall() if row[0]})
 
             p_n = get_unique_list("NewProcessName")
             u_n = get_unique_list("NLT")
             d_n = get_unique_list("DomainName")
 
-            # Final data processing (same as above)
             finaldata = []
             for row in fetchdata:
                 fd = list(row)
-                fd.pop(0)  # Remove ProcessName if not needed
+                fd.pop(0)
                 if len(fd) == 14:
-                    fd.pop()  # Remove extra field
+                    fd.pop()
                 try:
                     fd.insert(11, time_difference(fd[9], fd[10]))
                 except:
@@ -377,11 +362,10 @@ def index():
                 row.insert(0, i)
             headings.insert(0, "S.No")
 
-            # Bar Chart 1 (Dynamic: By ProcessName or another field)
-            group_by_field = "ProcessName" if process_name else "DomainName"  # Adjust based on the filters
+            group_by_field = "ProcessName" if process_name else "DomainName"
             bd_dic = {}
             for row in finaldata:
-                key = row[4] if group_by_field == "ProcessName" else row[14]  # Group by ProcessName or DomainName
+                key = row[4] if group_by_field == "ProcessName" else row[14]
                 if not key:
                     continue
                 try:
@@ -398,46 +382,35 @@ def index():
             l2 = list(bd_dic.keys())
             bardata1 = [[vals[i] for vals in bd_dic.values()] for i in range(3)]
 
-            # Bar Chart 2 (Dynamic: Group by Month)
-            dtm = {
-                "01": "January", "02": "February", "03": "March",
-                "04": "April", "05": "May", "06": "June",
-                "07": "July", "08": "August", "09": "September",
-                "10": "October", "11": "November", "12": "December"
-            }
+            dtm = {"01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June", "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}
             ld_dic = {}
-
-            # Aggregate data by month
-            for i, key in enumerate(l2):  # Assuming l2 contains Process Names
-                month = dtm.get(key[3:5])  # Extract month from Process Name
+            for i, key in enumerate(l2):
+                month = dtm.get(key[3:5])
                 if not month:
                     continue
                 if month not in ld_dic:
                     ld_dic[month] = [bardata1[0][i], bardata1[1][i], bardata1[2][i]]
                 else:
-                    ld_dic[month][0] += bardata1[0][i]  # VolumeProcessed
-                    ld_dic[month][1] += bardata1[1][i]  # SuccessVolume
-                    ld_dic[month][2] += bardata1[2][i]  # FailedVolume
+                    ld_dic[month][0] += bardata1[0][i]
+                    ld_dic[month][1] += bardata1[1][i]
+                    ld_dic[month][2] += bardata1[2][i]
 
-            # Prepare final bar chart data
-            l3 = list(ld_dic.keys())  # Months
-            bardata2 = [[vals[i] for vals in ld_dic.values()] for i in range(3)]  # [VolumeProcessed, SuccessVolume, FailedVolume]
+            l3 = list(ld_dic.keys())
+            bardata2 = [[vals[i] for vals in ld_dic.values()] for i in range(3)]
 
-
-            # Cache
             cache.delete('finaldata_key')
             cache.set('finaldata_key', finaldata)
 
             return jsonify({
-                'l2': l2,            # Bar Chart 1 labels (Process Names)
-                'bardata1': bardata1,  # Bar Chart 1 data
-                'l3': l3,            # Bar Chart 2 labels (Months)
-                'bardata2': bardata2,  # Bar Chart 2 data
-                'data': finaldata,     # Table data
-                'p_n': p_n,            # Dropdown: Process Names
-                'u_n': u_n,            # Dropdown: NLT Names
-                'd_n': d_n,            # Dropdown: Domain Names
-                'headings': headings,  # Table headings
+                'l2': l2,
+                'bardata1': bardata1,
+                'l3': l3,
+                'bardata2': bardata2,
+                'data': finaldata,
+                'p_n': p_n,
+                'u_n': u_n,
+                'd_n': d_n,
+                'headings': headings,
                 'SuccessCount': SuccessCount,
                 'FailedCount': FailedCount,
             })
