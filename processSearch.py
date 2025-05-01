@@ -268,11 +268,11 @@ def index():
             if end_date:
                 log_filters += f" AND {table}.Date <= '{end_date}'"
 
-            post_join_filters = "WHERE 1=1"
+            post_join_conditions = ""
             if user_name:
-                post_join_filters += f" AND PNL.NLT = '{user_name}'"
+                post_join_conditions += f" AND PNL.NLT = '{user_name}'"
             if domain_name:
-                post_join_filters += f" AND PNL.DomainName = '{domain_name}'"
+                post_join_conditions += f" AND PNL.DomainName = '{domain_name}'"
 
             cte_column_selection = column_selection.replace(table, 'CTE')
 
@@ -288,8 +288,9 @@ def index():
                 SELECT {cte_column_selection}
                 FROM CTE
                 LEFT JOIN [ProcessData].[dbo].[Prod_NLT_List] AS PNL ON CTE.ProcessName = PNL.ProcessName
-                {post_join_filters}
-                AND rn = 1 AND CTE.Status NOT LIKE '%Progress%'
+                WHERE rn = 1
+                AND CTE.Status NOT LIKE '%Progress%'
+                {post_join_conditions}
                 ORDER BY CTE.EndTime DESC
             """
             cur.execute(non_transactional_query)
@@ -414,6 +415,7 @@ def index():
                 'SuccessCount': SuccessCount,
                 'FailedCount': FailedCount,
             })
+
 
 
 
