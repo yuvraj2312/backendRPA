@@ -238,9 +238,9 @@ def index():
             if status_name:
                 transactional_where += f" AND {table}.Status = '{status_name}'"
             if start_date:
-                transactional_where += f" AND {table}.Date >= '{start_date}'"
+                transactional_where += f" AND CAST({table}.Date AS DATE) >= CAST('{start_date}' AS DATE)"
             if end_date:
-                transactional_where += f" AND {table}.Date <= '{end_date}'"
+                transactional_where += f" AND CAST({table}.Date AS DATE) <= CAST('{end_date}' AS DATE)"
 
             post_join_conditions = ""
             if user_name:
@@ -268,9 +268,9 @@ def index():
             if status_name:
                 log_filters += f" AND {table}.Status = '{status_name}'"
             if start_date:
-                log_filters += f" AND {table}.Date >= '{start_date}'"
+                log_filters += f" AND CAST({table}.Date AS DATE) >= CAST('{start_date}' AS DATE)"
             if end_date:
-                log_filters += f" AND {table}.Date <= '{end_date}'"
+                log_filters += f" AND CAST({table}.Date AS DATE) <= CAST('{end_date}' AS DATE)"
 
             cte_column_selection = column_selection.replace(table, 'CTE')
 
