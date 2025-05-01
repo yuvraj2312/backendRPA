@@ -274,7 +274,7 @@ def index():
             if domain_name:
                 post_join_filters += f" AND PNL.DomainName = '{domain_name}'"
 
-            cte_column_selection = column_selection.replace(table, '[CTE]').replace('PNL.', 'PNL.')
+            cte_column_selection = column_selection.replace(table, 'CTE')
 
             non_transactional_query = f"""
                 WITH CTE AS (
