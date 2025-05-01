@@ -347,23 +347,48 @@ def index():
             finaldata = []
             for row in fetchdata:
                 fd = list(row)
+
+                # Defensive: skip if row has too few columns
+                if len(fd) < 12:
+                    continue
+
+                # Remove first column (original ProcessName, redundant if needed)
                 fd.pop(0)
+
+                # If NewProcessName is at index 0 now and shouldn't be included, remove (based on original logic)
                 if len(fd) == 14:
                     fd.pop()
-                try:
-                    fd.insert(11, time_difference(fd[9], fd[10]))
-                except:
-                    fd.insert(11, "NA")
+
+                # Safely insert Duration between EndTime and Output
+                if len(fd) > 10:
+                    try:
+                        duration = time_difference(fd[9], fd[10])
+                    except:
+                        duration = "NA"
+                else:
+                    duration = "NA"
+
+                fd.insert(11, duration)
                 finaldata.append(fd)
 
+            # Insert heading for duration
             headings.insert(11, "Duration")
+
+            # Add serial number column to data and headings
             for i, row in enumerate(finaldata, start=1):
                 row.insert(0, i)
             headings.insert(0, "S.No")
 
             group_by_field = "ProcessName" if process_name else "DomainName"
             bd_dic = {}
+
             for row in finaldata:
+                # Skip rows that are too short
+                if group_by_field == "ProcessName" and len(row) <= 4:
+                    continue
+                if group_by_field == "DomainName" and len(row) <= 14:
+                    continue
+
                 key = row[4] if group_by_field == "ProcessName" else row[14]
                 if not key:
                     continue
