@@ -4,7 +4,7 @@ def index():
     cur = None
     try:
         # Determine if the request is for filtered data (ProcessSearch)
-        filter_request = bool(request.args.get('Process_name') or request.args.get('User_name') or request.args.get('Status_name') or request.args.get('Domain_name') or request.args.get('date1') or request.args.get('date2'))
+        filter_request = bool(request.args.get('processname') or request.args.get('username') or request.args.get('status') or request.args.get('domain') or request.args.get('start_date') or request.args.get('end_date'))
         
         if not filter_request:
             # Default landing page logic (without filters)
@@ -203,12 +203,12 @@ def index():
             # Process Search (filtered data) logic
 
             # Fetch the filter parameters from the request
-            process_name = request.args.get('Process_name')
-            user_name = request.args.get('User_name')
-            status_name = request.args.get('Status_name')
-            domain_name = request.args.get('Domain_name')
-            start_date = request.args.get('date1')
-            end_date = request.args.get('date2')
+            process_name = request.args.get('processname')
+            user_name = request.args.get('username')
+            status_name = request.args.get('status')
+            domain_name = request.args.get('domain')
+            start_date = request.args.get('start_date')
+            end_date = request.args.get('end_date')
 
             connection = get_connection()
             cur = connection.cursor()
@@ -216,7 +216,7 @@ def index():
             table = "[ProcessData].[dbo].[RPA_Prod_TransactionLog]"
             join_clause = f"LEFT JOIN [Prod_NLT_List] ON {table}.ProcessName = [Prod_NLT_List].ProcessName"
 
-            # Base columns selection
+            # Base column selection
             base_columns = [
                 f"{table}.ProcessName AS 'Process Name'",
                 "[Prod_NLT_List].NewProcessName",
@@ -234,27 +234,27 @@ def index():
             ]
             column_selection = ', '.join(base_columns)
 
-            # Build the WHERE clause based on the filters
-            where_clause = "WHERE 1=1"
+            # === Filters for transactional query (JOIN is already done) ===
+            transactional_where = "WHERE 1=1"
             if process_name:
-                where_clause += f" AND {table}.ProcessName = '{process_name}'"
+                transactional_where += f" AND {table}.ProcessName = '{process_name}'"
             if user_name:
-                where_clause += f" AND [Prod_NLT_List].NLT = '{user_name}'"
+                transactional_where += f" AND [Prod_NLT_List].NLT = '{user_name}'"
             if status_name:
-                where_clause += f" AND {table}.Status = '{status_name}'"
+                transactional_where += f" AND {table}.Status = '{status_name}'"
             if domain_name:
-                where_clause += f" AND [Prod_NLT_List].DomainName = '{domain_name}'"
+                transactional_where += f" AND [Prod_NLT_List].DomainName = '{domain_name}'"
             if start_date:
-                where_clause += f" AND {table}.Date >= '{start_date}'"
+                transactional_where += f" AND {table}.Date >= '{start_date}'"
             if end_date:
-                where_clause += f" AND {table}.Date <= '{end_date}'"
+                transactional_where += f" AND {table}.Date <= '{end_date}'"
 
-            # Transactional Query
+            # === Transactional Query ===
             transactional_query = f"""
                 SELECT {column_selection}
                 FROM {table}
                 {join_clause}
-                {where_clause}
+                {transactional_where}
                 AND [ProcessType] LIKE '%Transactional%'
                 AND [Status] NOT LIKE '%Progress%'
                 ORDER BY [End Time] DESC
@@ -262,25 +262,48 @@ def index():
             cur.execute(transactional_query)
             fetchdata = cur.fetchall()
 
-            # Non-Transactional Query (Latest entries)
+            # === Non-Transactional Query ===
+
+            # Step 1: filters BEFORE join (only columns from base table)
+            log_filters = "WHERE 1=1"
+            if process_name:
+                log_filters += f" AND {table}.ProcessName = '{process_name}'"
+            if status_name:
+                log_filters += f" AND {table}.Status = '{status_name}'"
+            if start_date:
+                log_filters += f" AND {table}.Date >= '{start_date}'"
+            if end_date:
+                log_filters += f" AND {table}.Date <= '{end_date}'"
+
+            # Step 2: filters AFTER join (columns from [Prod_NLT_List])
+            post_join_filters = "WHERE 1=1"
+            if user_name:
+                post_join_filters += f" AND [Prod_NLT_List].NLT = '{user_name}'"
+            if domain_name:
+                post_join_filters += f" AND [Prod_NLT_List].DomainName = '{domain_name}'"
+
             cte_column_selection = column_selection.replace(table, '[CTE]')
+
+            # Final non-transactional query
             non_transactional_query = f"""
                 WITH CTE AS (
                     SELECT *, ROW_NUMBER() OVER (
                         PARTITION BY Date, ProcessName ORDER BY StartTime DESC
                     ) AS rn
                     FROM {table}
-                    {where_clause}
+                    {log_filters}
                     AND [ProcessType] NOT LIKE '%Transactional%' AND [ProcessType] IS NOT NULL
                 )
                 SELECT {cte_column_selection}
                 FROM CTE
                 {join_clause.replace(table, 'CTE')}
-                WHERE rn = 1 AND [Status] NOT LIKE '%Progress%'
+                {post_join_filters}
+                AND rn = 1 AND [Status] NOT LIKE '%Progress%'
                 ORDER BY [End Time] DESC
             """
             cur.execute(non_transactional_query)
             fetchdata += cur.fetchall()
+
 
             # Time sort
             def parse_time(timestamp):
