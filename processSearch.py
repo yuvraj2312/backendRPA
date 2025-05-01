@@ -463,3 +463,31 @@ for i, row in enumerate(finaldata, start=1):
     row.insert(0, i)
 headings.insert(0, "S.No")
 
+
+
+
+group_by_field = "ProcessName" if process_name else "DomainName"
+bd_dic = {}
+
+for row in finaldata:
+    # Skip rows that are too short
+    if group_by_field == "ProcessName" and len(row) <= 4:
+        continue
+    if group_by_field == "DomainName" and len(row) <= 14:
+        continue
+
+    key = row[4] if group_by_field == "ProcessName" else row[14]
+    if not key:
+        continue
+    try:
+        vp, sv, fv = int(row[7]), int(row[8]), int(row[9])
+        if key not in bd_dic:
+            bd_dic[key] = [vp, sv, fv]
+        else:
+            bd_dic[key][0] += vp
+            bd_dic[key][1] += sv
+            bd_dic[key][2] += fv
+    except:
+        continue
+
+
