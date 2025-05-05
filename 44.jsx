@@ -73,21 +73,21 @@ const LandingPage = () => {
           end_date: filters.endDate
         }
       });
-      setTableData(res.data.data);
-      setHeadings(res.data.headings);
-      setSuccessCount(res.data.SuccessCount);
-      setFailedCount(res.data.FailedCount);
+      setTableData(res.data.data || []);
+      setHeadings(res.data.headings || []);
+      setSuccessCount(res.data.SuccessCount || 0);
+      setFailedCount(res.data.FailedCount || 0);
       setCurrentPage(1);
 
-      const todayChart = res.data.bardata1.map((val, idx) => ({
+      const todayChart = res.data.bardata1?.map((val, idx) => ({
         label: `Today - Value ${idx + 1}`,
         Value: val[0]
-      }));
+      })) || [];
 
-      const monthlyChart = res.data.bardata2.map((val, idx) => ({
+      const monthlyChart = res.data.bardata2?.map((val, idx) => ({
         label: `Month - Value ${idx + 1}`,
         Value: val[0]
-      }));
+      })) || [];
 
       setBarChartDataToday(todayChart);
       setBarChartDataMonthly(monthlyChart);
@@ -120,7 +120,6 @@ const LandingPage = () => {
   };
 
   const handleExportCSV = () => {
-    // Prepare data for export
     const csvData = [headings, ...tableData];
     return csvData;
   };
@@ -185,19 +184,6 @@ const LandingPage = () => {
         >
           Prev
         </button>
-
-        {startPage > 1 && (
-          <>
-            <button
-              onClick={() => changePage(1)}
-              className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-            >
-              1
-            </button>
-            {startPage > 2 && <span className="px-2">...</span>}
-          </>
-        )}
-
         {pageNumbers.map((num) => (
           <button
             key={num}
@@ -207,19 +193,6 @@ const LandingPage = () => {
             {num}
           </button>
         ))}
-
-        {endPage < totalPages && (
-          <>
-            {endPage < totalPages - 1 && <span className="px-2">...</span>}
-            <button
-              onClick={() => changePage(totalPages)}
-              className={`px-3 py-1 rounded border ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-            >
-              {totalPages}
-            </button>
-          </>
-        )}
-
         <button
           onClick={() => changePage(currentPage + 1)}
           disabled={currentPage === totalPages}
@@ -269,38 +242,55 @@ const LandingPage = () => {
               <label className="block text-sm font-medium">Process Name</label>
               <select name="processname" value={filters.processname} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
                 <option value="">All</option>
-                {dropdownOptions.processes1.map((proc) => (
-                  <option key={proc} value={proc}>{proc}</option>
+                {dropdownOptions.processes1.map((process) => (
+                  <option key={process} value={process}>{process}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium">Status</label>
-              <select name="status" value={filters.status} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
-                <option value="">All</option>
-                <option value="Success">Success</option>
-                <option value="Failed">Failed</option>
-              </select>
+              <input
+                type="text"
+                name="status"
+                value={filters.status}
+                onChange={handleInputChange}
+                className="w-full mt-1 border rounded px-2 py-1"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium">Start Date</label>
-              <input type="date" name="startDate" value={filters.startDate} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1" />
+              <input
+                type="date"
+                name="startDate"
+                value={filters.startDate}
+                onChange={handleInputChange}
+                className="w-full mt-1 border rounded px-2 py-1"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium">End Date</label>
-              <input type="date" name="endDate" value={filters.endDate} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1" />
+              <input
+                type="date"
+                name="endDate"
+                value={filters.endDate}
+                onChange={handleInputChange}
+                className="w-full mt-1 border rounded px-2 py-1"
+              />
             </div>
           </div>
-
-          <button onClick={handleSearch} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-            Search
-          </button>
-
-          {/* Bar Graphs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-            <div>
-              <h3 className="text-lg font-semibold">Today's Results</h3>
-              <ResponsiveContainer width="100%" height={200}>
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={handleSearch}
+              className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Search
+            </button>
+          </div>
+          {/* Bar Charts */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-lg shadow">
+              <h3 className="text-lg font-semibold mb-4">Today's Volume</h3>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={barChartDataToday}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" />
@@ -310,9 +300,9 @@ const LandingPage = () => {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold">{getCurrentMonth()} Monthly Results</h3>
-              <ResponsiveContainer width="100%" height={200}>
+            <div className="bg-white p-4 rounded-lg shadow">
+              <h3 className="text-lg font-semibold mb-4">Monthly Volume</h3>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={barChartDataMonthly}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="label" />
@@ -323,64 +313,62 @@ const LandingPage = () => {
               </ResponsiveContainer>
             </div>
           </div>
-
+          {/* Success and Failed Counts */}
+          <div className="mt-6 flex space-x-6 justify-center">
+            <div className="bg-white p-4 rounded-lg shadow text-center">
+              <h4 className="text-xl font-semibold">Success Count</h4>
+              <p className="text-2xl font-bold">{successCount}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow text-center">
+              <h4 className="text-xl font-semibold">Failed Count</h4>
+              <p className="text-2xl font-bold">{failedCount}</p>
+            </div>
+          </div>
           {/* Table */}
-          <div className="overflow-x-auto mt-8">
-            <table className="min-w-full table-auto">
-              <thead className="bg-gray-100">
-                <tr>
-                  {headings.map((heading, index) => {
-                    return visibleColumns.includes(heading) ? (
-                      <th key={index} className="px-4 py-2 text-sm font-semibold text-gray-700">
-                        <div className="flex justify-between">
-                          <span>{heading}</span>
+          <div className="mt-6 bg-white p-4 rounded-lg shadow">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead>
+                  <tr>
+                    {headings.map((heading, index) => (
+                      <th key={index} className="px-4 py-2 border-b">
+                        <label>
                           <input
                             type="checkbox"
+                            name={heading}
                             checked={visibleColumns.includes(heading)}
                             onChange={handleColumnVisibilityChange}
-                            name={heading}
                           />
-                        </div>
+                          {heading}
+                        </label>
                       </th>
-                    ) : null;
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedData.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="border-t">
-                    {row.map((cell, cellIndex) => {
-                      return visibleColumns.includes(headings[cellIndex]) ? (
-                        <td key={cellIndex} className="px-4 py-2 text-sm text-gray-600">
-                          {cell}
-                        </td>
-                      ) : null;
-                    })}
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedData.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {headings.map((heading, colIndex) => {
+                        if (!visibleColumns.includes(heading)) return null;
+                        return (
+                          <td key={colIndex} className="px-4 py-2 border-b">
+                            {row[heading]}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4">{renderPagination()}</div>
           </div>
-
-          {/* Pagination */}
-          {renderPagination()}
-
-          {/* Export Buttons */}
-          <div className="mt-4">
-            <button onClick={handleExportCopy} className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800">
-              Copy
-            </button>
-            <CSVLink data={handleExportCSV()} filename="table_data.csv">
-              <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 ml-2">
-                Export as CSV
-              </button>
-            </CSVLink>
-            <button onClick={handleExportExcel} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 ml-2">
-              Export as Excel
-            </button>
-            <button onClick={handleExportPDF} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 ml-2">
-              Export as PDF
-            </button>
+          {/* Export Options */}
+          <div className="mt-4 flex justify-center space-x-4">
+            <button onClick={handleExportCopy} className="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Copy</button>
+            <button onClick={handleExportCSV} className="px-6 py-2 bg-green-500 text-white rounded hover:bg-green-600">CSV</button>
+            <button onClick={handleExportExcel} className="px-6 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">Excel</button>
+            <button onClick={handleExportPDF} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600">PDF</button>
           </div>
         </div>
       </div>
