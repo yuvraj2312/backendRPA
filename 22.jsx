@@ -311,3 +311,67 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
+{!areFiltersApplied() ? (
+  // Show Today + Monthly charts
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="bg-gray-100 p-4 rounded shadow h-64">
+      <h2 className="text-lg font-semibold mb-2 text-center">Today - {new Date().toLocaleDateString()}</h2>
+      <ResponsiveContainer width="100%" height="90%">
+        <BarChart data={barChartDataToday}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="Value" fill="#4CAF50" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+
+    <div className="bg-gray-100 p-4 rounded shadow h-64">
+      <h2 className="text-lg font-semibold mb-2 text-center">Monthly - {getCurrentMonth()}</h2>
+      <ResponsiveContainer width="100%" height="90%">
+        <BarChart data={barChartDataMonthly}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey="Value" fill="#2196F3" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+) : (
+  // Show Filtered bardata1 and bardata2 charts
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="bg-gray-100 p-4 rounded shadow h-64">
+      <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata1 Graph</h2>
+      <ResponsiveContainer width="100%" height="90%">
+        <BarChart data={barChart1Data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" />
+          <YAxis />
+          <Tooltip />
+          {Object.keys(barChart1Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
+            <Bar key={key} dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][idx % 3]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+
+    <div className="bg-gray-100 p-4 rounded shadow h-64">
+      <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata2 Graph</h2>
+      <ResponsiveContainer width="100%" height="90%">
+        <BarChart data={barChart2Data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="label" />
+          <YAxis />
+          <Tooltip />
+          {Object.keys(barChart2Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
+            <Bar key={key} dataKey={key} fill={['#ff7300', '#387908', '#8884d8'][idx % 3]} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+)}
