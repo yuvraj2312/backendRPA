@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import * as XLSX from "xlsx";
+import axios from "axios";
 
 const TrafficDashboard = () => {
   const location = useLocation();
@@ -14,6 +15,7 @@ const TrafficDashboard = () => {
     file: null,
   });
   const [parsedData, setParsedData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value, files } = e.target;
@@ -52,11 +54,7 @@ const TrafficDashboard = () => {
         }
 
         setParsedData(formattedRows);
-        setFormData({
-          ...formData,
-          file: file
-        });
-
+        setFormData({ ...formData, file });
         alert(`${formattedRows.length} rows parsed successfully.`);
       };
 
@@ -77,8 +75,42 @@ const TrafficDashboard = () => {
     ]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
-
     XLSX.writeFile(workbook, "template.xlsx");
+  };
+
+  const handleSubmit = async () => {
+    const submitData = parsedData.length > 0
+      ? parsedData
+      : formData.nodeIp
+        ? [{ node_ip: formData.nodeIp, checktype: checkType }]
+        : [];
+
+    if (submitData.length === 0) {
+      alert("Please provide Node IP or upload a valid file.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.post("http://127.0.0.1:5000/Deploysubmit", {
+        data: submitData,
+        domain,
+        process,
+      });
+
+      if (response.status === 200) {
+        alert("Submitted successfully!");
+        setFormData({ nodeIp: "", file: null });
+        setParsedData([]);
+      } else {
+        alert("Submission failed.");
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("An error occurred while submitting the data.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,7 +125,6 @@ const TrafficDashboard = () => {
             </h2>
 
             <div className="max-w-4xl mx-auto space-y-6">
-              {/* Pre/Post check buttons */}
               <div className="flex justify-center gap-6">
                 {["Precheck", "Postcheck"].map((type) => (
                   <button
@@ -110,7 +141,6 @@ const TrafficDashboard = () => {
                 ))}
               </div>
 
-              {/* Node IP (optional if uploading file) */}
               <div>
                 <label className="block text-sm font-semibold mb-1">
                   Node IP <span className="text-red-500">*</span>
@@ -125,7 +155,6 @@ const TrafficDashboard = () => {
                 />
               </div>
 
-              {/* Download Template, Upload File, and Process Button */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div>
                   <button
@@ -149,7 +178,7 @@ const TrafficDashboard = () => {
                   />
                 </div>
 
-                <div className="flex items-end">
+                <div>
                   <button
                     className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 w-full"
                     onClick={() => console.log("Parsed Data:", parsedData)}
@@ -159,14 +188,16 @@ const TrafficDashboard = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <div className="flex justify-start mt-6">
-                <button className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700">
-                  Submit
+                <button
+                  className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                >
+                  {loading ? "Submitting..." : "Submit"}
                 </button>
               </div>
 
-              {/* Show parsed data if available */}
               {parsedData.length > 0 && (
                 <div className="mt-6">
                   <h4 className="font-semibold mb-2">Parsed Entries:</h4>
