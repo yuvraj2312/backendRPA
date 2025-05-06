@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
@@ -9,11 +10,26 @@ const AdhocTrigger = () => {
     process: "",
   });
 
+  const [domainOptions, setDomainOptions] = useState([]);
+  const [processOptions, setProcessOptions] = useState([]);
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    axios
+      .get("http://localhost:8000/get_domains") // update port if needed
+      .then((response) => {
+        setDomainOptions(response.data.domains1 || []);
+        setProcessOptions(response.data.processes1 || []);
+      })
+      .catch((error) => {
+        console.error("Error fetching dropdown data:", error);
+      });
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSearch = () => {
@@ -41,27 +57,37 @@ const AdhocTrigger = () => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Domain Name <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   name="domain"
-                  placeholder="Enter Domain Name"
                   value={formData.domain}
                   onChange={handleInputChange}
                   className="w-full border px-4 py-2 rounded-md focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                  <option value="">Select Domain</option>
+                  {domainOptions.map((domain) => (
+                    <option key={domain} value={domain}>
+                      {domain}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Process Name <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   name="process"
-                  placeholder="Enter Process Name"
                   value={formData.process}
                   onChange={handleInputChange}
                   className="w-full border px-4 py-2 rounded-md focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                  <option value="">Select Process</option>
+                  {processOptions.map((process) => (
+                    <option key={process} value={process}>
+                      {process}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="text-center">
                 <button
