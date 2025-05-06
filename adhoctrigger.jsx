@@ -33,14 +33,24 @@ const AdhocTrigger = () => {
   };
 
   const handleSearch = () => {
-    if (formData.domain && formData.process) {
+    const { domain, process } = formData;
+    if (!domain || !process) {
+      alert("Please enter both Domain and Process Name.");
+      return;
+    }
+  
+    if (
+      domain === "NOC" &&
+      process === "Traffic_Confirmation_Pre & Post_Change Activity"
+    ) {
       navigate("/traffic-dashboard", {
-        state: { domain: formData.domain, process: formData.process },
+        state: { domain, process },
       });
     } else {
-      alert("Please enter both Domain and Process Name.");
+      alert("Process not found.");
     }
   };
+  
 
   return (
     <div className="flex min-h-screen">
