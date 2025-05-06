@@ -1,23 +1,4 @@
-from flask import Flask, request, jsonify, session
-from flask_cors import CORS
-import pyodbc
-import requests
-import traceback
-import time
 
-app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # required for session
-CORS(app)  # Allow cross-origin requests
-
-def token_required(f):
-    def decorator(*args, **kwargs):
-        # Dummy auth logic for testing — replace with actual logic
-        return f(*args, **kwargs)
-    return decorator
-
-def createAuthKey():
-    # Replace with your logic to generate auth key
-    return "dummy-auth-key"
 
 def createRPAResponse(fileid, bot_id, precheck_postcheck, node_ip):
     return {
@@ -34,7 +15,7 @@ def createRPAResponse(fileid, bot_id, precheck_postcheck, node_ip):
     }
 
 @app.route('/Deploysubmit', methods=['POST'])
-@token_required
+
 def Deploysubmit():
     server = 'ABC'
     database = 'PD'
@@ -49,9 +30,9 @@ def Deploysubmit():
         connection = pyodbc.connect(connection_string)
         cur = connection.cursor()
 
-        data = request.get_json()
-        precheck_postcheck = data.get('precheck_postcheck')
-        node_ip = data.get('node_ip')
+        
+        precheck_postcheck = request.form.get('precheck_postcheck')
+        node_ip = request.form.get('node_ip')
 
         if not precheck_postcheck or not node_ip:
             return jsonify({"error": "Missing required fields"}), 400
@@ -63,7 +44,7 @@ def Deploysubmit():
                                         precheck_postcheck=precheck_postcheck,
                                         node_ip=node_ip)
 
-        rpa_api_response = requests.post("https://abcd", json=rparesponse, headers=headers, verify=False)
+        rpa_api_response = requests.post("https://abcd", json=rparesponse,  verify=False)
         print("External API Response:", rpa_api_response.text)
 
         # Insert into database

@@ -92,19 +92,26 @@ const TrafficDashboard = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post("http://127.0.0.1:5000/Deploysubmit", {
-        data: submitData,
-        domain,
-        process,
-      });
 
-      if (response.status === 200) {
-        alert("Submitted successfully!");
-        setFormData({ nodeIp: "", file: null });
-        setParsedData([]);
-      } else {
-        alert("Submission failed.");
+      for (const row of submitData) {
+        const formPayload = new FormData();
+        formPayload.append("node_ip", row.node_ip);
+        formPayload.append("checktype", row.checktype);
+
+        const response = await axios.post("http://127.0.0.1:5000/Deploysubmit", formPayload, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+
+        if (response.status !== 200) {
+          throw new Error("Failed to submit one or more entries.");
+        }
       }
+
+      alert("Submitted successfully!");
+      setFormData({ nodeIp: "", file: null });
+      setParsedData([]);
     } catch (error) {
       console.error("Submission error:", error);
       alert("An error occurred while submitting the data.");
@@ -130,11 +137,10 @@ const TrafficDashboard = () => {
                   <button
                     key={type}
                     onClick={() => setCheckType(type)}
-                    className={`px-6 py-2 rounded-md border ${
-                      checkType === type
-                        ? "bg-red-600 text-white"
-                        : "bg-white text-gray-800"
-                    } hover:shadow`}
+                    className={`px-6 py-2 rounded-md border ${checkType === type
+                      ? "bg-red-600 text-white"
+                      : "bg-white text-gray-800"
+                      } hover:shadow`}
                   >
                     {type}
                   </button>
