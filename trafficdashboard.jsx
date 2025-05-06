@@ -5,15 +5,14 @@ import Header from "../components/Header";
 import * as XLSX from "xlsx";
 import axios from "axios";
 
+// ... (imports remain the same)
+
 const TrafficDashboard = () => {
   const location = useLocation();
   const { domain, process } = location.state || {};
 
   const [checkType, setCheckType] = useState("Precheck");
-  const [formData, setFormData] = useState({
-    nodeIp: "",
-    file: null,
-  });
+  const [formData, setFormData] = useState({ nodeIp: "", file: null });
   const [parsedData, setParsedData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -60,10 +59,7 @@ const TrafficDashboard = () => {
 
       reader.readAsBinaryString(file);
     } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
+      setFormData({ ...formData, [name]: value });
     }
   };
 
@@ -99,14 +95,10 @@ const TrafficDashboard = () => {
         formPayload.append("checktype", row.checktype);
 
         const response = await axios.post("http://127.0.0.1:5000/Deploysubmit", formPayload, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         });
 
-        if (response.status !== 200) {
-          throw new Error("Failed to submit one or more entries.");
-        }
+        if (response.status !== 200) throw new Error("Submission failed.");
       }
 
       alert("Submitted successfully!");
@@ -125,31 +117,35 @@ const TrafficDashboard = () => {
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header />
-        <div className="flex-1 bg-gray-100 p-8">
-          <div className="w-full bg-white rounded-lg shadow-lg p-10">
-            <h2 className="text-2xl font-bold mb-8 text-blue-900 text-center">
+        <main className="flex-1 bg-gray-100 p-6 md:p-10">
+          <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-8 md:p-12">
+            <h1 className="text-3xl font-bold text-blue-900 mb-8 text-center">
               Automation Request Form
-            </h2>
+            </h1>
 
-            <div className="max-w-4xl mx-auto space-y-6">
-              <div className="flex justify-center gap-6">
-                {["Precheck", "Postcheck"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setCheckType(type)}
-                    className={`px-6 py-2 rounded-md border ${checkType === type
-                      ? "bg-red-600 text-white"
-                      : "bg-white text-gray-800"
-                      } hover:shadow`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
+            {/* Checktype Toggle */}
+            <div className="flex justify-center gap-6 mb-10">
+              {["Precheck", "Postcheck"].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setCheckType(type)}
+                  className={`px-6 py-2 rounded-lg border transition duration-150 ${
+                    checkType === type
+                      ? "bg-blue-600 text-white shadow"
+                      : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
 
+            {/* Form Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Manual Entry */}
               <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Node IP <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium mb-1">
+                  Enter Node IP <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -157,71 +153,65 @@ const TrafficDashboard = () => {
                   value={formData.nodeIp}
                   onChange={handleInputChange}
                   placeholder="e.g. 192.168.1.1"
-                  className="w-full border px-4 py-2 rounded-md focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-300 px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div>
-                  <button
-                    className="bg-gray-300 px-4 py-2 rounded-md hover:bg-gray-400 w-full"
-                    onClick={downloadTemplate}
-                  >
-                    Download Template
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-1">
-                    Upload File <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="file"
-                    name="file"
-                    onChange={handleInputChange}
-                    className="w-full border rounded-md px-2 py-2"
-                    accept=".xlsx, .xls"
-                  />
-                </div>
-
-                <div>
-                  <button
-                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 w-full"
-                    onClick={() => console.log("Parsed Data:", parsedData)}
-                  >
-                    Process
-                  </button>
-                </div>
+              {/* Upload File */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Upload Excel File <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  name="file"
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md p-2 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                  accept=".xlsx, .xls"
+                />
               </div>
-
-              <div className="flex justify-start mt-6">
-                <button
-                  className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700"
-                  onClick={handleSubmit}
-                  disabled={loading}
-                >
-                  {loading ? "Submitting..." : "Submit"}
-                </button>
-              </div>
-
-              {parsedData.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="font-semibold mb-2">Parsed Entries:</h4>
-                  <ul className="text-sm bg-gray-100 p-4 rounded-md max-h-64 overflow-y-auto">
-                    {parsedData.map((item, idx) => (
-                      <li key={idx}>
-                        {item.node_ip} - {item.checktype}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
+
+            {/* Actions */}
+            <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+              <button
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-md transition"
+                onClick={downloadTemplate}
+              >
+                Download Template
+              </button>
+
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className={`bg-green-600 text-white px-8 py-2 rounded-md hover:bg-green-700 transition ${
+                  loading ? "opacity-60 cursor-not-allowed" : ""
+                }`}
+              >
+                {loading ? "Submitting..." : "Submit"}
+              </button>
+            </div>
+
+            {/* Parsed Preview */}
+            {parsedData.length > 0 && (
+              <div className="mt-10 bg-gray-50 rounded-md p-4 shadow-inner">
+                <h4 className="text-md font-semibold mb-2 text-gray-700">Parsed Entries:</h4>
+                <ul className="text-sm text-gray-800 space-y-1 max-h-60 overflow-y-auto">
+                  {parsedData.map((item, idx) => (
+                    <li key={idx} className="border-b border-dashed py-1">
+                      <span className="font-mono text-blue-900">{item.node_ip}</span> —{" "}
+                      <span className="italic">{item.checktype}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
 };
 
 export default TrafficDashboard;
+
