@@ -312,66 +312,27 @@ const LandingPage = () => {
 
 export default LandingPage;
 
-{!areFiltersApplied() ? (
-  // Show Today + Monthly charts
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div className="bg-gray-100 p-4 rounded shadow h-64">
-      <h2 className="text-lg font-semibold mb-2 text-center">Today - {new Date().toLocaleDateString()}</h2>
-      <ResponsiveContainer width="100%" height="90%">
-        <BarChart data={barChartDataToday}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="label" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="Value" fill="#4CAF50" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+const labels1 = res.data.bardata1_full.labels;
+    const volumes1 = res.data.bardata1_full.volumes;
 
-    <div className="bg-gray-100 p-4 rounded shadow h-64">
-      <h2 className="text-lg font-semibold mb-2 text-center">Monthly - {getCurrentMonth()}</h2>
-      <ResponsiveContainer width="100%" height="90%">
-        <BarChart data={barChartDataMonthly}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="label" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="Value" fill="#2196F3" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
-) : (
-  // Show Filtered bardata1 and bardata2 charts
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div className="bg-gray-100 p-4 rounded shadow h-64">
-      <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata1 Graph</h2>
-      <ResponsiveContainer width="100%" height="90%">
-        <BarChart data={barChart1Data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="label" />
-          <YAxis />
-          <Tooltip />
-          {Object.keys(barChart1Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
-            <Bar key={key} dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][idx % 3]} />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    const bardata1Graph = labels1.map((label, i) => {
+      const obj = { label };
+      volumes1.forEach((volList, idx) => {
+        obj[`Series${idx + 1}`] = volList[i];
+      });
+      return obj;
+    });
 
-    <div className="bg-gray-100 p-4 rounded shadow h-64">
-      <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata2 Graph</h2>
-      <ResponsiveContainer width="100%" height="90%">
-        <BarChart data={barChart2Data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="label" />
-          <YAxis />
-          <Tooltip />
-          {Object.keys(barChart2Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
-            <Bar key={key} dataKey={key} fill={['#ff7300', '#387908', '#8884d8'][idx % 3]} />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  </div>
-)}
+    const labels2 = res.data.bardata2_full.labels;
+    const volumes2 = res.data.bardata2_full.volumes;
+
+    const bardata2Graph = labels2.map((label, i) => {
+      const obj = { label };
+      volumes2.forEach((volList, idx) => {
+        obj[`Series${idx + 1}`] = volList[i];
+      });
+      return obj;
+    });
+
+    setBarChart1Data(bardata1Graph);
+    setBarChart2Data(bardata2Graph);

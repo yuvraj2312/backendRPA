@@ -404,33 +404,60 @@ def index():
                     continue
 
             l2 = list(bd_dic.keys())
-            bardata1 = [[vals[i] for vals in bd_dic.values()] for i in range(3)]
+            # bardata1 = [[vals[i] for vals in bd_dic.values()] for i in range(3)]
+            bardata11 = {
+                "labels": l2,
+                "volumes": [[vals[i] for vals in bd_dic.values()] for i in range(3)]
+            }
 
             dtm = {"01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June",
                 "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}
+            # ld_dic = {}
+            # for i, key in enumerate(l2):
+            #     month = dtm.get(key[3:5])
+            #     if not month:
+            #         continue
+            #     if month not in ld_dic:
+            #         ld_dic[month] = [bardata1[0][i], bardata1[1][i], bardata1[2][i]]
+            #     else:
+            #         ld_dic[month][0] += bardata1[0][i]
+            #         ld_dic[month][1] += bardata1[1][i]
+            #         ld_dic[month][2] += bardata1[2][i]
+
+            # l3 = list(ld_dic.keys())
+            # bardata2 = [[vals[i] for vals in ld_dic.values()] for i in range(3)]
+
             ld_dic = {}
-            for i, key in enumerate(l2):
-                month = dtm.get(key[3:5])
-                if not month:
-                    continue
-                if month not in ld_dic:
-                    ld_dic[month] = [bardata1[0][i], bardata1[1][i], bardata1[2][i]]
-                else:
-                    ld_dic[month][0] += bardata1[0][i]
-                    ld_dic[month][1] += bardata1[1][i]
-                    ld_dic[month][2] += bardata1[2][i]
+            for label, vals in zip(l2, volumes_list):
+                if len(label) >= 5:
+                    month_code = label[3:5]
+                    month = dtm.get(month_code)
+                    if not month:
+                        continue
+                    if month not in ld_dic:
+                        ld_dic[month] = vals.copy()
+                    else:
+                        for i in range(3):
+                            try:
+                                ld_dic[month][i] += vals[i]
+                            except:
+                                ld_dic[month][i] = vals[i]
 
             l3 = list(ld_dic.keys())
-            bardata2 = [[vals[i] for vals in ld_dic.values()] for i in range(3)]
+            monthly_volumes = list(ld_dic.values())
+            bardata22 = {
+                'labels': l3,
+                'data': [[vals[i] for vals in monthly_volumes] for i in range(3)]
+            }
 
             cache.delete('finaldata_key')
             cache.set('finaldata_key', finaldata)
 
             return jsonify({
-                'l2': l2,
-                'bardata1': bardata1,
-                'l3': l3,
-                'bardata2': bardata2,
+                # 'l2': l2,
+                'bardata11': bardata11,
+                # 'l3': l3,
+                'bardata22': bardata22,
                 'data': finaldata,
                 'p_n': p_n,
                 'u_n': u_n,
@@ -451,68 +478,5 @@ def index():
 
 
 
-
-
-finaldata = []
-for row in fetchdata:
-    fd = list(row)
-
-    # Defensive: skip if row has too few columns
-    if len(fd) < 12:
-        continue
-
-    # Remove first column (original ProcessName, redundant if needed)
-    fd.pop(0)
-
-    # If NewProcessName is at index 0 now and shouldn't be included, remove (based on original logic)
-    if len(fd) == 14:
-        fd.pop()
-
-    # Safely insert Duration between EndTime and Output
-    if len(fd) > 10:
-        try:
-            duration = time_difference(fd[9], fd[10])
-        except:
-            duration = "NA"
-    else:
-        duration = "NA"
-
-    fd.insert(11, duration)
-    finaldata.append(fd)
-
-# Insert heading for duration
-headings.insert(11, "Duration")
-
-# Add serial number column to data and headings
-for i, row in enumerate(finaldata, start=1):
-    row.insert(0, i)
-headings.insert(0, "S.No")
-
-
-
-
-group_by_field = "ProcessName" if process_name else "DomainName"
-bd_dic = {}
-
-for row in finaldata:
-    # Skip rows that are too short
-    if group_by_field == "ProcessName" and len(row) <= 4:
-        continue
-    if group_by_field == "DomainName" and len(row) <= 14:
-        continue
-
-    key = row[4] if group_by_field == "ProcessName" else row[14]
-    if not key:
-        continue
-    try:
-        vp, sv, fv = int(row[7]), int(row[8]), int(row[9])
-        if key not in bd_dic:
-            bd_dic[key] = [vp, sv, fv]
-        else:
-            bd_dic[key][0] += vp
-            bd_dic[key][1] += sv
-            bd_dic[key][2] += fv
-    except:
-        continue
 
 

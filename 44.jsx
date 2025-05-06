@@ -1,62 +1,83 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import FilterBar from './FilterBar';
-import TableWithExport from './TableWithExport';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
+import Sidebar from '../components/Sidebar';
+import Header from '../components/Header';
 
 const LandingPage = () => {
   const [filters, setFilters] = useState({
-    nltname: '',
+    username: '',
     domain: '',
     processname: '',
     status: '',
     startDate: '',
-    endDate: '',
+    endDate: ''
   });
 
-  const [userOptions, setUserOptions] = useState([]);
-  const [domainOptions, setDomainOptions] = useState([]);
-  const [processOptions, setProcessOptions] = useState([]);
+  const [dropdownOptions, setDropdownOptions] = useState({
+    usernames1: [],
+    domains1: [],
+    processes1: []
+  });
+
   const [tableData, setTableData] = useState([]);
   const [headings, setHeadings] = useState([]);
-  const [barChartDataToday, setBarChartDataToday] = useState([]);
-  const [barChartDataMonthly, setBarChartDataMonthly] = useState([]);
   const [successCount, setSuccessCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
 
-  // NEW states for additional charts
+  const [barChartDataToday, setBarChartDataToday] = useState([]);
+  const [barChartDataMonthly, setBarChartDataMonthly] = useState([]);
+
   const [barChart1Data, setBarChart1Data] = useState([]);
-  const [barChart2Data, setBarChart2Data] = useState([]);
+const [barChart2Data, setBarChart2Data] = useState([]);
 
-  useEffect(() => {
-    fetchDropdownOptions();
-    fetchMainData();
-  }, []);
 
-  const fetchDropdownOptions = async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+
+  const fetchDropdowns = async () => {
+    console.log('fetching dropdown options');
+    
     try {
-      const res = await axios.get('http://127.0.0.1:5000/get_domains');
-      setUserOptions(res.data.users);
-      setDomainOptions(res.data.domains);
-      setProcessOptions(res.data.processes);
+      const res = await axios.get('http://127.0.0.1:5000/get_domains', {
+        params: {
+          username: filters.username,
+          domain: filters.domain,
+          processname: filters.processname
+        }
+      });
+      console.log('dropdowns fetched:', res.data);
+      
+      setDropdownOptions(res.data);
     } catch (error) {
-      console.error('Error fetching dropdown options:', error);
+      console.error('Error fetching dropdowns:', error);
     }
   };
 
   const fetchMainData = async () => {
+    console.log('fetching main data...');
+    
     try {
       const res = await axios.get('http://127.0.0.1:5000/', {
         params: {
-          username: filters.nltname,
+          username: filters.username,
           domain: filters.domain,
           processname: filters.processname,
           status: filters.status,
           start_date: filters.startDate,
-          end_date: filters.endDate,
-        },
+          end_date: filters.endDate
+        }
       });
+      console.log('main data fetched:', res.data);
+      
 
       setTableData(res.data.data);
       setHeadings(res.data.headings);
@@ -64,140 +85,303 @@ const LandingPage = () => {
       setFailedCount(res.data.FailedCount);
       setCurrentPage(1);
 
-      // Today Bar Chart
       const todayChart = res.data.bardata1.map((val, idx) => ({
         label: `Today - Value ${idx + 1}`,
-        Value: val[0],
+        Value: val[0]
       }));
-      setBarChartDataToday(todayChart);
 
-      // Monthly Bar Chart
       const monthlyChart = res.data.bardata2.map((val, idx) => ({
         label: `Month - Value ${idx + 1}`,
-        Value: val[0],
+        Value: val[0]
       }));
+
+      setBarChartDataToday(todayChart);
       setBarChartDataMonthly(monthlyChart);
 
-      // bardata1_full (volumes: [[...], [...]], labels: [...])
       const labels1 = res.data.bardata1_full.labels;
-      const volumes1 = res.data.bardata1_full.volumes;
+    const volumes1 = res.data.bardata1_full.volumes;
 
-      const bardata1Graph = labels1.map((label, i) => {
-        const obj = { label };
-        volumes1.forEach((series, idx) => {
-          obj[`Series${idx + 1}`] = series[i];
-        });
-        return obj;
+    const bardata1Graph = labels1.map((label, i) => {
+      const obj = { label };
+      volumes1.forEach((volList, idx) => {
+        obj[`Series${idx + 1}`] = volList[i];
       });
-      setBarChart1Data(bardata1Graph);
+      return obj;
+    });
 
-      // bardata2_full (volumes: [[...], [...]], labels: [...])
-      const labels2 = res.data.bardata2_full.labels;
-      const volumes2 = res.data.bardata2_full.volumes;
+    const labels2 = res.data.bardata2_full.labels;
+    const volumes2 = res.data.bardata2_full.volumes;
 
-      const bardata2Graph = labels2.map((label, i) => {
-        const obj = { label };
-        volumes2.forEach((series, idx) => {
-          obj[`Series${idx + 1}`] = series[i];
-        });
-        return obj;
+    const bardata2Graph = labels2.map((label, i) => {
+      const obj = { label };
+      volumes2.forEach((volList, idx) => {
+        obj[`Series${idx + 1}`] = volList[i];
       });
-      setBarChart2Data(bardata2Graph);
+      return obj;
+    });
+
+    setBarChart1Data(bardata1Graph);
+    setBarChart2Data(bardata2Graph);
     } catch (error) {
       console.error('Error fetching main data:', error);
     }
   };
 
+  useEffect(() => {
+    fetchDropdowns();
+    fetchMainData();
+  }, []);
+  const handleInputChange = (e) => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
+  };
+
+  const handleSearch = () => {
+    console.log("search clicked", filters);
+    
+    fetchDropdowns();
+    fetchMainData();
+  };
+
+  const totalPages = Math.ceil(tableData.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const paginatedData = tableData.slice(startIndex, startIndex + rowsPerPage);
+
+  const changePage = (pageNum) => {
+    if (pageNum >= 1 && pageNum <= totalPages) {
+      setCurrentPage(pageNum);
+    }
+  };
+
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = startPage + maxPagesToShow - 1;
+
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i);
+    }
+
+    return (
+      <div className="flex justify-center mt-4 space-x-2 items-center">
+        <button
+          onClick={() => changePage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+        >
+          Prev
+        </button>
+
+        {startPage > 1 && (
+          <>
+            <button
+              onClick={() => changePage(1)}
+              className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="px-2">...</span>}
+          </>
+        )}
+
+        {pageNumbers.map((num) => (
+          <button
+            key={num}
+            onClick={() => changePage(num)}
+            className={`px-3 py-1 rounded border ${currentPage === num ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+          >
+            {num}
+          </button>
+        ))}
+
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="px-2">...</span>}
+            <button
+              onClick={() => changePage(totalPages)}
+              className={`px-3 py-1 rounded border ${currentPage === totalPages ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={() => changePage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
+
+  const getCurrentMonth = () => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const currentMonth = new Date().getMonth();
+    return months[currentMonth];
+  };
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-center">RPA Dashboard</h1>
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      <Sidebar />
 
-      <FilterBar
-        filters={filters}
-        setFilters={setFilters}
-        userOptions={userOptions}
-        domainOptions={domainOptions}
-        processOptions={processOptions}
-        onSearch={fetchMainData}
-      />
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        <Header />
 
-      {/* KPI Cards */}
-      <div className="flex justify-around space-x-4">
-        <div className="bg-green-100 text-green-800 font-semibold px-6 py-4 rounded shadow">
-          Success: {successCount}
-        </div>
-        <div className="bg-red-100 text-red-800 font-semibold px-6 py-4 rounded shadow">
-          Failed: {failedCount}
+        <div className="p-6 space-y-8">
+          {/* Filters */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium">NLT Name</label>
+              <select name="username" value={filters.username} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
+                <option value="">All</option>
+                {dropdownOptions.usernames1.map((user) => (
+                  <option key={user} value={user}>{user}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Domain Name</label>
+              <select name="domain" value={filters.domain} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
+                <option value="">All</option>
+                {dropdownOptions.domains1.map((domain) => (
+                  <option key={domain} value={domain}>{domain}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Process Name</label>
+              <select name="processname" value={filters.processname} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
+                <option value="">All</option>
+                {dropdownOptions.processes1.map((proc) => (
+                  <option key={proc} value={proc}>{proc}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Status</label>
+              <select name="status" value={filters.status} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1">
+                <option value="">All</option>
+                <option value="Success">Success</option>
+                <option value="Failed">Failed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Start Date</label>
+              <input type="date" name="startDate" value={filters.startDate} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">End Date</label>
+              <input type="date" name="endDate" value={filters.endDate} onChange={handleInputChange} className="w-full mt-1 border rounded px-2 py-1" />
+            </div>
+          </div>
+
+          <button onClick={handleSearch} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Search
+          </button>
+
+          {/* Bar Graphs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gray-100 p-4 rounded shadow h-64">
+              <h2 className="text-lg font-semibold mb-2 text-center">Today - {new Date().toLocaleDateString()}</h2>
+              <ResponsiveContainer width="100%" height="90%">
+                <BarChart data={barChartDataToday}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="Value" fill="#4CAF50" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="bg-gray-100 p-4 rounded shadow h-64">
+              <h2 className="text-lg font-semibold mb-2 text-center">Monthly - {getCurrentMonth()}</h2>
+              <ResponsiveContainer width="100%" height="90%">
+                <BarChart data={barChartDataMonthly}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="label" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="Value" fill="#2196F3" /></BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-gray-100 p-4 rounded shadow h-64">
+            <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata1 Graph</h2>
+            <ResponsiveContainer width="100%" height="90%">
+                <BarChart data={barChart1Data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                {Object.keys(barChart1Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
+                    <Bar key={key} dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][idx % 3]} />
+                ))}
+                </BarChart>
+            </ResponsiveContainer>
+            </div>
+
+            <div className="bg-gray-100 p-4 rounded shadow h-64">
+            <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata2 Graph</h2>
+            <ResponsiveContainer width="100%" height="90%">
+                <BarChart data={barChart2Data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis />
+                <Tooltip />
+                {Object.keys(barChart2Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
+                    <Bar key={key} dataKey={key} fill={['#ff7300', '#387908', '#8884d8'][idx % 3]} />
+                ))}
+                </BarChart>
+            </ResponsiveContainer>
+            </div>
+
+
+          {/* KPI Counts */}
+          <div className="flex gap-6 mt-6">
+            <div className="bg-green-100 text-green-700 px-4 py-2 rounded shadow">
+              ✅ Success Count: {successCount}
+            </div>
+            <div className="bg-red-100 text-red-700 px-4 py-2 rounded shadow">
+              ❌ Failed Count: {failedCount}
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto mt-8">
+            <table className="min-w-full border border-gray-300 text-sm">
+              <thead className="bg-gray-200 text-left">
+                <tr>
+                  {headings.map((head, index) => (
+                    <th key={index} className="px-4 py-2 border">{head}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedData.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="hover:bg-gray-50">
+                    {row.map((cell, colIndex) => (
+                      <td key={colIndex} className="px-4 py-2 border">{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {renderPagination()}
+          </div>
         </div>
       </div>
-
-      {/* Bar Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-100 p-4 rounded shadow h-64">
-          <h2 className="text-lg font-semibold mb-2 text-center">Today Graph</h2>
-          <ResponsiveContainer width="100%" height="90%">
-            <BarChart data={barChartDataToday}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="Value" fill="#8884d8" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-gray-100 p-4 rounded shadow h-64">
-          <h2 className="text-lg font-semibold mb-2 text-center">Monthly Graph</h2>
-          <ResponsiveContainer width="100%" height="90%">
-            <BarChart data={barChartDataMonthly}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="Value" fill="#82ca9d" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Additional Bar Charts */}
-        <div className="bg-gray-100 p-4 rounded shadow h-64">
-          <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata1 Graph</h2>
-          <ResponsiveContainer width="100%" height="90%">
-            <BarChart data={barChart1Data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip />
-              {Object.keys(barChart1Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
-                <Bar key={key} dataKey={key} fill={['#8884d8', '#82ca9d', '#ffc658'][idx % 3]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-gray-100 p-4 rounded shadow h-64">
-          <h2 className="text-lg font-semibold mb-2 text-center">Detailed Bardata2 Graph</h2>
-          <ResponsiveContainer width="100%" height="90%">
-            <BarChart data={barChart2Data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis />
-              <Tooltip />
-              {Object.keys(barChart2Data[0] || {}).filter(k => k !== 'label').map((key, idx) => (
-                <Bar key={key} dataKey={key} fill={['#ff7300', '#387908', '#8884d8'][idx % 3]} />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <TableWithExport
-        data={tableData}
-        headings={headings}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-      />
     </div>
   );
 };
