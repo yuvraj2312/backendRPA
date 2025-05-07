@@ -193,13 +193,13 @@ def fetch_dashboard_data():
     d_n = get_unique_list("DomainName")
 
     # BAR DATA
-    group_by_field = "ProcessName" if process_name else "DomainName"
+    # Bar Chart 1 - Group by Process Name
     bd_dic = {}
-
     for row in finaldata:
+        if len(row) < 10:
+            continue
+        key = row[4]  # Process Name (adjust index if needed)
         try:
-            key = row[4] if group_by_field == "ProcessName" else row[14]
-            if not key: continue
             vp, sv, fv = int(row[7]), int(row[8]), int(row[9])
             if key not in bd_dic:
                 bd_dic[key] = [vp, sv, fv]
@@ -210,33 +210,44 @@ def fetch_dashboard_data():
         except:
             continue
 
-    l2 = list(bd_dic.keys())
+    labels1 = list(bd_dic.keys())
+    volumes_list = list(bd_dic.values())
     bardata11 = {
-        "labels": l2,
-        "volumes": [[v[i] for v in bd_dic.values()] for i in range(3)]
+        "labels": labels1,
+        "volumes": [[vals[i] for vals in volumes_list] for i in range(3)]
     }
 
-    # Monthly bar chart data
-    dtm = {
-        "01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June",
-        "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"
-    }
+    # Bar Chart 2 - Group by Month extracted from Date
+    dtm = {"01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June",
+        "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}
+
     ld_dic = {}
-    for label, vals in zip(l2, bardata11['volumes'][0:3]):
-        if len(label) >= 5:
-            month = dtm.get(label[3:5])
-            if not month: continue
+    for row in finaldata:
+        if len(row) < 6:
+            continue
+        date_str = row[5]  # Assuming this is the Date (adjust if needed)
+        try:
+            month_code = date_str[5:7]  # e.g., '2024-03-01'
+            month = dtm.get(month_code)
+            if not month:
+                continue
+            vp, sv, fv = int(row[7]), int(row[8]), int(row[9])
             if month not in ld_dic:
-                ld_dic[month] = vals.copy()
+                ld_dic[month] = [vp, sv, fv]
             else:
-                for i in range(3):
-                    ld_dic[month][i] += vals[i]
+                ld_dic[month][0] += vp
+                ld_dic[month][1] += sv
+                ld_dic[month][2] += fv
+        except:
+            continue
 
-    l3 = list(ld_dic.keys())
+    labels2 = list(ld_dic.keys())
+    monthly_volumes = list(ld_dic.values())
     bardata22 = {
-        "labels": l3,
-        "data": [[v[i] for v in ld_dic.values()] for i in range(3)]
+        'labels': labels2,
+        'data': [[vals[i] for vals in monthly_volumes] for i in range(3)]
     }
+
 
     # Caching (optional)
     cache.delete('finaldata_key')
