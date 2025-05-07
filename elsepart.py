@@ -4,6 +4,7 @@ import time
 from your_db_utils import get_connection  # replace with your db utility
 from your_cache import cache  # replace with your caching module
 
+
 def time_difference(start, end):
     try:
         start_time = datetime.strptime(start, "%d-%m-%Y %H:%M:%S")
@@ -11,6 +12,7 @@ def time_difference(start, end):
         return str(end_time - start_time)
     except:
         return "NA"
+
 
 @app.route('/', methods=['GET'])
 def fetch_dashboard_data():
@@ -137,13 +139,13 @@ def fetch_dashboard_data():
         cur.execute(q, p)
         return len(cur.fetchall())
 
-    where_clause = transactional_where
     TSuccessCount = f"""
         SELECT 1 FROM {table}
-        {where_clause}
+        {transactional_where}
         AND ProcessType LIKE '%Transactional%'
         AND Status LIKE '%Success%'
         AND Status NOT LIKE '%Progress%'
+        {post_join_conditions}
     """
     TFailedCount = TSuccessCount.replace("Success", "Fail")
 
@@ -157,12 +159,14 @@ def fetch_dashboard_data():
             AND ProcessType NOT LIKE '%Transactional%' AND ProcessType IS NOT NULL
         )
         SELECT 1 FROM CTE
+        LEFT JOIN [ProcessData].[dbo].[Prod_NLT_List] AS PNL ON CTE.ProcessName = PNL.ProcessName
         WHERE rn = 1 AND Status LIKE '%Success%' AND Status NOT LIKE '%Progress%'
+        {post_join_conditions}
     """
     RFailedCount = RSuccessCount.replace("Success", "Fail")
 
-    SuccessCount = get_count(TSuccessCount, tuple(params)) + get_count(RSuccessCount, tuple(log_params))
-    FailedCount = get_count(TFailedCount, tuple(params)) + get_count(RFailedCount, tuple(log_params))
+    SuccessCount = get_count(TSuccessCount, tuple(params)) + get_count(RSuccessCount, tuple(log_params + params[len(log_params):]))
+    FailedCount = get_count(TFailedCount, tuple(params)) + get_count(RFailedCount, tuple(log_params + params[len(log_params):]))
 
     # HEADINGS
     cur.execute("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='RPA_Dashboard_Table_Header'")
@@ -179,8 +183,8 @@ def fetch_dashboard_data():
         else:
             duration = "NA"
         r.insert(11, duration)
-        r.pop(0)  # remove original ProcessName
-        r.insert(0, i)  # insert serial number
+        r.pop(0)
+        r.insert(0, i)
         finaldata.append(r)
 
     # DROPDOWN VALUES
@@ -193,12 +197,11 @@ def fetch_dashboard_data():
     d_n = get_unique_list("DomainName")
 
     # BAR DATA
-    # Bar Chart 1 - Group by Process Name
     bd_dic = {}
     for row in finaldata:
         if len(row) < 10:
             continue
-        key = row[4]  # Process Name (adjust index if needed)
+        key = row[4]
         try:
             vp, sv, fv = int(row[7]), int(row[8]), int(row[9])
             if key not in bd_dic:
@@ -217,17 +220,16 @@ def fetch_dashboard_data():
         "volumes": [[vals[i] for vals in volumes_list] for i in range(3)]
     }
 
-    # Bar Chart 2 - Group by Month extracted from Date
     dtm = {"01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June",
-        "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}
+           "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}
 
     ld_dic = {}
     for row in finaldata:
         if len(row) < 6:
             continue
-        date_str = row[5]  # Assuming this is the Date (adjust if needed)
+        date_str = row[5]
         try:
-            month_code = date_str[5:7]  # e.g., '2024-03-01'
+            month_code = date_str[5:7]
             month = dtm.get(month_code)
             if not month:
                 continue
@@ -248,8 +250,6 @@ def fetch_dashboard_data():
         'data': [[vals[i] for vals in monthly_volumes] for i in range(3)]
     }
 
-
-    # Caching (optional)
     cache.delete('finaldata_key')
     cache.set('finaldata_key', finaldata)
 
