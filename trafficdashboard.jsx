@@ -122,76 +122,74 @@ const TrafficDashboard = () => {
             <h1 className="text-3xl font-bold text-blue-900 mb-8 text-center">
               Automation Request Form
             </h1>
-
-            {/* Checktype Toggle */}
-            <div className="flex justify-center gap-6 mb-10">
-              {["Precheck", "Postcheck"].map((type) => (
+  
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Side - Manual Entry */}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Enter Node IP <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="nodeIp"
+                    value={formData.nodeIp}
+                    onChange={handleInputChange}
+                    placeholder="e.g. 192.168.1.1"
+                    className="w-full border border-gray-300 px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+  
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Check Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="checktype"
+                    value={checkType}
+                    onChange={(e) => setCheckType(e.target.value)}
+                    className="w-full border border-gray-300 px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Precheck">Precheck</option>
+                    <option value="Postcheck">Postcheck</option>
+                  </select>
+                </div>
+  
                 <button
-                  key={type}
-                  onClick={() => setCheckType(type)}
-                  className={`px-6 py-2 rounded-lg border transition duration-150 ${
-                    checkType === type
-                      ? "bg-blue-600 text-white shadow"
-                      : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className={`bg-green-600 text-white px-8 py-2 rounded-md hover:bg-green-700 transition ${
+                    loading ? "opacity-60 cursor-not-allowed" : ""
                   }`}
                 >
-                  {type}
+                  {loading ? "Submitting..." : "Submit"}
                 </button>
-              ))}
-            </div>
-
-            {/* Form Inputs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Manual Entry */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Enter Node IP <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="nodeIp"
-                  value={formData.nodeIp}
-                  onChange={handleInputChange}
-                  placeholder="e.g. 192.168.1.1"
-                  className="w-full border border-gray-300 px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
               </div>
-
-              {/* Upload File */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Upload Excel File <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="file"
-                  name="file"
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md p-2 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
-                  accept=".xlsx, .xls"
-                />
+  
+              {/* Right Side - File Upload & Template */}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Upload Excel File <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="file"
+                    name="file"
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-md p-2 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                    accept=".xlsx, .xls"
+                  />
+                </div>
+  
+                <button
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-md transition"
+                  onClick={downloadTemplate}
+                >
+                  Download Template
+                </button>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4">
-              <button
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-md transition"
-                onClick={downloadTemplate}
-              >
-                Download Template
-              </button>
-
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className={`bg-green-600 text-white px-8 py-2 rounded-md hover:bg-green-700 transition ${
-                  loading ? "opacity-60 cursor-not-allowed" : ""
-                }`}
-              >
-                {loading ? "Submitting..." : "Submit"}
-              </button>
-            </div>
-
+  
             {/* Parsed Preview */}
             {parsedData.length > 0 && (
               <div className="mt-10 bg-gray-50 rounded-md p-4 shadow-inner">
@@ -205,12 +203,13 @@ const TrafficDashboard = () => {
                   ))}
                 </ul>
               </div>
-            )}
+            )}s
           </div>
         </main>
       </div>
     </div>
   );
+  
 };
 
 export default TrafficDashboard;
