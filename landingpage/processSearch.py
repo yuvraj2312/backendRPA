@@ -199,8 +199,7 @@ def index():
                 'FailedCount': FailedCount,
             })
         
-        else:
-            # Process Search (filtered data) logic
+        else:            # Process Search (filtered data) logic
 
             process_name = request.args.get('processname')
             user_name = request.args.get('username')
