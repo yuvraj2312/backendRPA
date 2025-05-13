@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FilterBar } from "./FilterBar";
+import { Sidebar } from "./Sidebar";
+import { Header } from "./Header";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -12,8 +14,6 @@ import {
   Legend,
   Tooltip,
 } from "chart.js";
-import Header from "./Header";
-import Sidebar from "./Sidebar";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Legend, Tooltip);
 
@@ -31,7 +31,6 @@ export const LandingPage = () => {
   const [dateLabel, setDateLabel] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [visibleColumns, setVisibleColumns] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     fetchData({});
@@ -45,15 +44,21 @@ export const LandingPage = () => {
         body: JSON.stringify(filterPayload),
       });
       const result = await response.json();
-      setData(result.data || []);
-      setHeadings(result.headings || []);
+
+      const { headings = [], data = [] } = result;
+      const formattedData = data.map((row) =>
+        Object.fromEntries(headings.map((key, i) => [key, row[i]]))
+      );
+
+      setData(formattedData);
+      setHeadings(headings);
       setSuccessCount(result.SuccessCount);
       setFailedCount(result.FailedCount);
       setBardata1(result.bardata1 || []);
       setBardata11(result.bardata11 || null);
       setBardata22(result.bardata22 || null);
       setDateLabel(result.l2 ? result.l2[0] : "");
-      setVisibleColumns(result.headings || []);
+      setVisibleColumns(headings);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -137,31 +142,37 @@ export const LandingPage = () => {
         plugins: { legend: { position: "top" } },
         scales: { y: { beginAtZero: true } },
       }}
+      height={200}
     />
   );
 
   return (
     <div className="flex h-screen">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-      <div className="flex flex-col flex-1 overflow-y-auto">
+      {/* Sidebar */}
+      <Sidebar />
+
+      <div className="flex flex-col flex-1 bg-gray-50">
+        {/* Header */}
         <Header />
-        <main className="p-6 space-y-6 bg-gray-50 min-h-screen">
+
+        <main className="p-6 overflow-y-auto space-y-6">
+          {/* Filter Bar */}
           <FilterBar onSearch={handleFilterSearch} />
 
-          {/* KPIs */}
+          {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-green-100 rounded-2xl p-4 shadow text-center">
-              <h3 className="text-xl font-semibold text-green-700">Success</h3>
-              <p className="text-3xl font-bold">{successCount}</p>
+            <div className="bg-white border-l-4 border-green-500 p-4 rounded-xl shadow">
+              <h3 className="text-lg font-semibold text-green-700">Success</h3>
+              <p className="text-2xl font-bold text-gray-700">{successCount}</p>
             </div>
-            <div className="bg-red-100 rounded-2xl p-4 shadow text-center">
-              <h3 className="text-xl font-semibold text-red-700">Failed</h3>
-              <p className="text-3xl font-bold">{failedCount}</p>
+            <div className="bg-white border-l-4 border-red-500 p-4 rounded-xl shadow">
+              <h3 className="text-lg font-semibold text-red-700">Failed</h3>
+              <p className="text-2xl font-bold text-gray-700">{failedCount}</p>
             </div>
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-8 bg-white p-4 rounded-xl shadow">
             {bardata11 && bardata22 ? (
               <>
                 {renderBarChart(bardata11.data, bardata11.labels)}
@@ -172,23 +183,17 @@ export const LandingPage = () => {
             )}
           </div>
 
-          {/* Table Controls */}
+          {/* Export + Column Controls */}
           <div className="flex flex-wrap justify-between items-center gap-4">
             <div className="flex gap-2">
-              <button className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600" onClick={copyToClipboard}>
-                Copy
-              </button>
-              <button className="bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600" onClick={exportExcel}>
-                Excel
-              </button>
-              <button className="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600" onClick={exportPDF}>
-                PDF
-              </button>
+              <button onClick={copyToClipboard} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Copy</button>
+              <button onClick={exportExcel} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Excel</button>
+              <button onClick={exportPDF} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">PDF</button>
             </div>
-            <div className="flex gap-2 items-center">
-              <label className="font-medium">Columns:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Columns:</label>
               <select
-                className="border rounded px-3 py-2 shadow"
+                className="border rounded px-2 py-1 text-sm"
                 onChange={(e) => toggleColumn(e.target.value)}
               >
                 <option value="">Toggle Columns</option>
@@ -202,25 +207,20 @@ export const LandingPage = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-auto border rounded-2xl shadow bg-white mt-4">
-            <table className="min-w-full text-sm text-left">
-              <thead className="bg-gray-200">
+          <div className="overflow-auto rounded-xl shadow border bg-white">
+            <table className="min-w-full text-sm table-auto">
+              <thead className="bg-gray-200 text-gray-700 font-semibold">
                 <tr>
                   {visibleColumns.map((col) => (
-                    <th key={col} className="px-4 py-3 font-semibold text-gray-700">
-                      {col}
-                    </th>
+                    <th key={col} className="px-4 py-2 text-left border-b">{col}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {currentPageData.map((row, idx) => (
-                  <tr
-                    key={idx}
-                    className="even:bg-gray-50 hover:bg-gray-100 transition"
-                  >
+                  <tr key={idx} className="even:bg-gray-50 hover:bg-gray-100 transition">
                     {visibleColumns.map((col) => (
-                      <td key={col} className="px-4 py-2">
+                      <td key={col} className="px-4 py-2 text-left border-b">
                         {row[col]}
                       </td>
                     ))}
@@ -231,11 +231,11 @@ export const LandingPage = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex justify-center items-center gap-2 mt-6">
+          <div className="flex justify-center items-center gap-2 mt-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 border rounded-xl disabled:opacity-50"
+              className="px-3 py-1 border rounded disabled:opacity-50"
             >
               Prev
             </button>
@@ -243,7 +243,7 @@ export const LandingPage = () => {
               <button
                 key={i}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`px-4 py-2 rounded-xl ${
+                className={`px-3 py-1 rounded ${
                   currentPage === i + 1 ? "bg-blue-500 text-white" : "border"
                 }`}
               >
@@ -253,7 +253,7 @@ export const LandingPage = () => {
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 border rounded-xl disabled:opacity-50"
+              className="px-3 py-1 border rounded disabled:opacity-50"
             >
               Next
             </button>
