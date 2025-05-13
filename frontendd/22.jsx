@@ -44,15 +44,13 @@ export const LandingPage = () => {
         body: JSON.stringify(filterPayload),
       });
       const result = await response.json();
-
       const { headings = [], data = [] } = result;
       const formattedData = data.map((row) =>
         Object.fromEntries(headings.map((key, i) => [key, row[i]]))
       );
-
       setData(formattedData);
-      setHeadings(headings);
-      setVisibleColumns(headings);
+      setHeadings(result.headings || []);
+      setVisibleColumns(result.headings || []);
       setSuccessCount(result.SuccessCount);
       setFailedCount(result.FailedCount);
       setBardata1(result.bardata1 || []);
@@ -94,11 +92,7 @@ export const LandingPage = () => {
 
   const copyToClipboard = () => {
     const text = [visibleColumns.join("\t")]
-      .concat(
-        currentPageData.map((row) =>
-          visibleColumns.map((col) => row[col]).join("\t")
-        )
-      )
+      .concat(currentPageData.map((row) => visibleColumns.map((col) => row[col]).join("\t")))
       .join("\n");
     navigator.clipboard.writeText(text);
   };
@@ -116,84 +110,83 @@ export const LandingPage = () => {
   };
 
   const renderBarChart = (chartData, labels) => (
-    <Bar
-      data={{
-        labels: labels,
-        datasets: [
-          {
-            label: "Total",
-            data: chartData[0],
-            backgroundColor: "rgba(54, 162, 235, 0.6)",
-          },
-          {
-            label: "Success",
-            data: chartData[1],
-            backgroundColor: "rgba(75, 192, 192, 0.6)",
-          },
-          {
-            label: "Failed",
-            data: chartData[2],
-            backgroundColor: "rgba(255, 99, 132, 0.6)",
-          },
-        ],
-      }}
-      options={{
-        responsive: true,
-        plugins: { legend: { position: "top" } },
-        scales: { y: { beginAtZero: true } },
-      }}
-    />
+    <div className="w-full md:w-2/3 mx-auto">
+      <Bar
+        data={{
+          labels,
+          datasets: [
+            {
+              label: "Total",
+              data: chartData[0],
+              backgroundColor: "rgba(54, 162, 235, 0.6)",
+            },
+            {
+              label: "Success",
+              data: chartData[1],
+              backgroundColor: "rgba(75, 192, 192, 0.6)",
+            },
+            {
+              label: "Failed",
+              data: chartData[2],
+              backgroundColor: "rgba(255, 99, 132, 0.6)",
+            },
+          ],
+        }}
+        options={{
+          responsive: true,
+          plugins: { legend: { position: "top" } },
+          scales: { y: { beginAtZero: true } },
+        }}
+      />
+    </div>
   );
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-col flex-1">
+
+      <div className="flex flex-col flex-1 overflow-y-auto bg-gray-50">
         <Header />
 
-        <main className="p-6 space-y-8 overflow-y-auto bg-gray-50 min-h-screen">
+        <main className="p-4 md:p-6 space-y-6">
           <FilterBar onSearch={handleFilterSearch} />
 
-          {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-2xl border-l-4 border-green-500 shadow">
-              <h3 className="text-md font-semibold text-green-700">Success</h3>
-              <p className="text-3xl font-bold text-gray-800">{successCount}</p>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white border-l-4 border-green-500 p-4 rounded-xl shadow">
+              <h3 className="text-lg font-semibold text-green-700">Success</h3>
+              <p className="text-2xl font-bold text-gray-700">{successCount}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border-l-4 border-red-500 shadow">
-              <h3 className="text-md font-semibold text-red-700">Failed</h3>
-              <p className="text-3xl font-bold text-gray-800">{failedCount}</p>
+            <div className="bg-white border-l-4 border-red-500 p-4 rounded-xl shadow">
+              <h3 className="text-lg font-semibold text-red-700">Failed</h3>
+              <p className="text-2xl font-bold text-gray-700">{failedCount}</p>
             </div>
           </div>
 
-          {/* Bar Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Charts */}
+          <div className="bg-white p-4 rounded-xl shadow space-y-6">
             {bardata11 && bardata22 ? (
               <>
-                <div className="bg-white p-4 rounded-xl shadow">{renderBarChart(bardata11.data, bardata11.labels)}</div>
-                <div className="bg-white p-4 rounded-xl shadow">{renderBarChart(bardata22.data, bardata22.labels)}</div>
+                {renderBarChart(bardata11.data, bardata11.labels)}
+                {renderBarChart(bardata22.data, bardata22.labels)}
               </>
             ) : (
-              bardata1.length > 0 && (
-                <div className="bg-white p-4 rounded-xl shadow col-span-2">
-                  {renderBarChart(bardata1, [dateLabel])}
-                </div>
-              )
+              bardata1.length > 0 && renderBarChart(bardata1, [dateLabel])
             )}
           </div>
 
-          {/* Export and Column Controls */}
-          <div className="flex flex-wrap justify-between items-center gap-4">
-            <div className="flex gap-2">
-              <button onClick={copyToClipboard} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow">Copy</button>
-              <button onClick={exportExcel} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl shadow">Excel</button>
-              <button onClick={exportPDF} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl shadow">PDF</button>
+          {/* Export and Column Toggle */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={copyToClipboard} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Copy</button>
+              <button onClick={exportExcel} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Excel</button>
+              <button onClick={exportPDF} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">PDF</button>
             </div>
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium">Columns:</label>
               <select
+                className="border rounded px-2 py-1 text-sm"
                 onChange={(e) => toggleColumn(e.target.value)}
-                className="border rounded px-3 py-1 text-sm bg-white"
               >
                 <option value="">Toggle Columns</option>
                 {headings.map((col) => (
@@ -206,20 +199,20 @@ export const LandingPage = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-auto rounded-xl shadow border bg-white max-w-full">
+          <div className="overflow-auto rounded-xl shadow border bg-white">
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-100 sticky top-0 z-10">
+              <thead className="bg-gray-100 text-gray-700 font-semibold">
                 <tr>
                   {visibleColumns.map((col) => (
-                    <th key={col} className="px-4 py-2 text-left font-medium text-gray-700">{col}</th>
+                    <th key={col} className="px-4 py-2 text-left">{col}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {currentPageData.map((row, idx) => (
-                  <tr key={idx} className="even:bg-gray-50 hover:bg-blue-50 transition">
+                  <tr key={idx} className="even:bg-gray-50 hover:bg-gray-100 transition">
                     {visibleColumns.map((col) => (
-                      <td key={col} className="px-4 py-2 whitespace-nowrap">{row[col]}</td>
+                      <td key={col} className="px-4 py-2">{row[col]}</td>
                     ))}
                   </tr>
                 ))}
@@ -228,11 +221,11 @@ export const LandingPage = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex justify-center items-center gap-1">
+          <div className="flex justify-center items-center gap-2 mt-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded disabled:opacity-40"
+              className="px-3 py-1 border rounded disabled:opacity-50"
             >
               Prev
             </button>
@@ -248,7 +241,7 @@ export const LandingPage = () => {
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded disabled:opacity-40"
+              className="px-3 py-1 border rounded disabled:opacity-50"
             >
               Next
             </button>
