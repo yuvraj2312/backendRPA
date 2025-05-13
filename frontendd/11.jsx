@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { FilterBar } from "./FilterBar";
-import { Sidebar } from "./Sidebar"; // your collapsible Sidebar
-import { Header } from "./Header";   // your custom Header
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -14,6 +12,8 @@ import {
   Legend,
   Tooltip,
 } from "chart.js";
+import Header from "./Header";
+import Sidebar from "./Sidebar";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Legend, Tooltip);
 
@@ -31,6 +31,7 @@ export const LandingPage = () => {
   const [dateLabel, setDateLabel] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [visibleColumns, setVisibleColumns] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     fetchData({});
@@ -105,9 +106,7 @@ export const LandingPage = () => {
 
   const toggleColumn = (col) => {
     setVisibleColumns((prev) =>
-      prev.includes(col)
-        ? prev.filter((c) => c !== col)
-        : [...prev, col]
+      prev.includes(col) ? prev.filter((c) => c !== col) : [...prev, col]
     );
   };
 
@@ -143,31 +142,26 @@ export const LandingPage = () => {
 
   return (
     <div className="flex h-screen">
-      {/* Sidebar */}
-      <Sidebar />
-
-      <div className="flex flex-col flex-1 bg-gray-50">
-        {/* Header */}
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <div className="flex flex-col flex-1 overflow-y-auto">
         <Header />
-
-        <main className="p-6 overflow-y-auto space-y-6">
-          {/* Filters */}
+        <main className="p-6 space-y-6 bg-gray-50 min-h-screen">
           <FilterBar onSearch={handleFilterSearch} />
 
-          {/* KPI Cards */}
+          {/* KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white border-l-4 border-green-500 p-4 rounded-xl shadow">
-              <h3 className="text-lg font-semibold text-green-700">Success</h3>
-              <p className="text-2xl font-bold text-gray-700">{successCount}</p>
+            <div className="bg-green-100 rounded-2xl p-4 shadow text-center">
+              <h3 className="text-xl font-semibold text-green-700">Success</h3>
+              <p className="text-3xl font-bold">{successCount}</p>
             </div>
-            <div className="bg-white border-l-4 border-red-500 p-4 rounded-xl shadow">
-              <h3 className="text-lg font-semibold text-red-700">Failed</h3>
-              <p className="text-2xl font-bold text-gray-700">{failedCount}</p>
+            <div className="bg-red-100 rounded-2xl p-4 shadow text-center">
+              <h3 className="text-xl font-semibold text-red-700">Failed</h3>
+              <p className="text-3xl font-bold">{failedCount}</p>
             </div>
           </div>
 
           {/* Charts */}
-          <div className="space-y-8 bg-white p-4 rounded-xl shadow">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {bardata11 && bardata22 ? (
               <>
                 {renderBarChart(bardata11.data, bardata11.labels)}
@@ -178,17 +172,23 @@ export const LandingPage = () => {
             )}
           </div>
 
-          {/* Export + Column Controls */}
+          {/* Table Controls */}
           <div className="flex flex-wrap justify-between items-center gap-4">
             <div className="flex gap-2">
-              <button onClick={copyToClipboard} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Copy</button>
-              <button onClick={exportExcel} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Excel</button>
-              <button onClick={exportPDF} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">PDF</button>
+              <button className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600" onClick={copyToClipboard}>
+                Copy
+              </button>
+              <button className="bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600" onClick={exportExcel}>
+                Excel
+              </button>
+              <button className="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600" onClick={exportPDF}>
+                PDF
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Columns:</label>
+            <div className="flex gap-2 items-center">
+              <label className="font-medium">Columns:</label>
               <select
-                className="border rounded px-2 py-1 text-sm"
+                className="border rounded px-3 py-2 shadow"
                 onChange={(e) => toggleColumn(e.target.value)}
               >
                 <option value="">Toggle Columns</option>
@@ -202,12 +202,12 @@ export const LandingPage = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-auto rounded-xl shadow border bg-white">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
+          <div className="overflow-auto border rounded-2xl shadow bg-white mt-4">
+            <table className="min-w-full text-sm text-left">
+              <thead className="bg-gray-200">
                 <tr>
                   {visibleColumns.map((col) => (
-                    <th key={col} className="px-4 py-2 text-left">
+                    <th key={col} className="px-4 py-3 font-semibold text-gray-700">
                       {col}
                     </th>
                   ))}
@@ -215,7 +215,10 @@ export const LandingPage = () => {
               </thead>
               <tbody>
                 {currentPageData.map((row, idx) => (
-                  <tr key={idx} className="even:bg-gray-50 hover:bg-gray-100 transition">
+                  <tr
+                    key={idx}
+                    className="even:bg-gray-50 hover:bg-gray-100 transition"
+                  >
                     {visibleColumns.map((col) => (
                       <td key={col} className="px-4 py-2">
                         {row[col]}
@@ -228,11 +231,11 @@ export const LandingPage = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex justify-center items-center gap-2 mt-4">
+          <div className="flex justify-center items-center gap-2 mt-6">
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="px-4 py-2 border rounded-xl disabled:opacity-50"
             >
               Prev
             </button>
@@ -240,10 +243,9 @@ export const LandingPage = () => {
               <button
                 key={i}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`px-3 py-1 rounded ${currentPage === i + 1
-                  ? "bg-blue-500 text-white"
-                  : "border"
-                  }`}
+                className={`px-4 py-2 rounded-xl ${
+                  currentPage === i + 1 ? "bg-blue-500 text-white" : "border"
+                }`}
               >
                 {i + 1}
               </button>
@@ -251,7 +253,7 @@ export const LandingPage = () => {
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded disabled:opacity-50"
+              className="px-4 py-2 border rounded-xl disabled:opacity-50"
             >
               Next
             </button>
